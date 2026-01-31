@@ -2,11 +2,12 @@ package luckydrop.demo.draw.inventory.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.cglib.core.Local;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "inventory")
@@ -35,8 +36,13 @@ public class Inventory {
     @Column(nullable = false)
     private boolean shippable;
 
+    @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<InventoryImage> images = new ArrayList<>();
+
     //private LocalDateTime created_at;
 
+    @Builder
     public Inventory(String name,
                      String brand,
                      String description,
