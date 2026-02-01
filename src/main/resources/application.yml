@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  main:
+    allow-circular-references: true
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/mysql
@@ -46,6 +48,7 @@ spring:
         default_batch_fetch_size: 100 # N+1 ?? ??? ?? ??
     database-platform: org.hibernate.dialect.MySQLDialect
 
-  # JWT ??? ? (?? ??)
-#  jwt:
-#    secret: 'ylWNT6xLqUg/K2pcfxlwumvsJ4UWRmF3SVh/wufsS2E='
+  # JWT Secret key
+jwt:
+  secret: "bHVja3lkcm9wc2VjcmV0YWNjZXNzdG9rZW5sdWNreWRyb3BzZWNyZXRhY2Nlc3N0b2tlbg=="
+  expiration: 3000 #분
