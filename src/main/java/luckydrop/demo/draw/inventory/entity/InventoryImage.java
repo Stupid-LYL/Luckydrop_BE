@@ -19,7 +19,7 @@ public class InventoryImage {
     @JoinColumn(name = "inventory_id", nullable = false)
     private Inventory inventory;
 
-    @Column(name = "image_url", length = 50, nullable = false)
+    @Column(name = "image_url", length = 500, nullable = false)
     private String imageUrl;
 
     @Column(name = "sort_order", nullable = false)
