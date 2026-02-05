@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/draws")
+@RequestMapping("/api/draws")
 public class DrawQueryController {
 
     private final DrawQueryService drawQueryService;
