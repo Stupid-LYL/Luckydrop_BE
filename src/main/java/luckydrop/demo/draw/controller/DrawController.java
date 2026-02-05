@@ -2,27 +2,39 @@ package luckydrop.demo.draw.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import luckydrop.demo.common.user.CustomUserPrincipal;
 import luckydrop.demo.draw.dto.request.DrawCreateRequest;
+import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawCreateResponse;
+import luckydrop.demo.draw.dto.response.DrawDetailResponse;
 import luckydrop.demo.draw.service.DrawService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/draws")
+@RequestMapping("/api/draws")
 public class DrawController {
 
     private final DrawService drawService;
 
-    @PostMapping
-    public ResponseEntity<DrawCreateResponse> createDraw(@RequestBody @Valid DrawCreateRequest request) {
-        Long drawId = drawService.createDraw(request);
+    @PostMapping("/create")
+    public ResponseEntity<DrawCreateResponse> createDraw(@RequestBody @Valid DrawCreateRequest request,
+                                                         @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        Long userId = principal.getMember().getId();
+        Long drawId = drawService.createDraw(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(DrawCreateResponse.of(drawId));
+    }
+
+    @PatchMapping("/{drawId}")
+    public DrawDetailResponse updateDraw(
+            @PathVariable Long drawId,
+            @RequestBody @Valid DrawUpdateRequest request
+            ) {
+        return drawService.updateDraw(drawId, request);
     }
 }

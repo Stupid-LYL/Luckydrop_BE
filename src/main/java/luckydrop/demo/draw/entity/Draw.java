@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
+import luckydrop.demo.member.entity.Member;
 
 import java.time.LocalDateTime;
 
@@ -24,6 +25,9 @@ public class Draw {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     //상품 정보
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -55,10 +59,16 @@ public class Draw {
     @Column(length = 20, nullable = false)
     private DrawStatus status;
 
+    @Column(name = "end_at_changed", nullable = false)
+    private boolean endAtChanged;
+
+
     //private LocalDateTime createdAt;
 
     @Builder
-    public Draw(Inventory inventory,
+    public Draw(
+                Long userId,
+                Inventory inventory,
                 String title,
                 String description,
                 Integer winnerCount,
@@ -66,6 +76,7 @@ public class Draw {
                 LocalDateTime startAt,
                 LocalDateTime endAt,
                 DrawStatus status) {
+        this.userId = userId;
         this.inventory =  inventory;
         this.title = title;
         this.description = description;
@@ -73,7 +84,9 @@ public class Draw {
         this.ticketCostEntry = ticketCostEntry;
         this.startAt = startAt;
         this.endAt = endAt;
-        this.status = status;
+
+        this.status = (status != null) ? status : DrawStatus.DRAFT;
+        this.endAtChanged = false;
     }
 
     // ==== 도메인 로직 ====
@@ -93,5 +106,17 @@ public class Draw {
     //드로우 취소
     public void cancel() {
         status = DrawStatus.CANCELLED;
+    }
+
+    public void changeDescription(String description) {
+        this.description = description;
+    }
+
+    public void changeEndAt(LocalDateTime endAt) {
+        this.endAt = endAt;
+    }
+
+    public void markEndAtChanged() {
+        this.endAtChanged = true;
     }
 }
