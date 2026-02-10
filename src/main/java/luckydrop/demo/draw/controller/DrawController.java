@@ -37,4 +37,10 @@ public class DrawController {
             ) {
         return drawService.updateDraw(drawId, request);
     }
+
+    @PostMapping("/{drawId}/draw")
+    public ResponseEntity<Void> draw(@PathVariable Long drawId) {
+        drawService.drawWinner(drawId);
+        return ResponseEntity.ok().build();
+    }
 }

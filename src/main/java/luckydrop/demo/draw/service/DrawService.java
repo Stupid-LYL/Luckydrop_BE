@@ -6,6 +6,8 @@ import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
 import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.draw.entity.DrawEntrySummary;
+import luckydrop.demo.draw.entity.DrawWinner;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
 import luckydrop.demo.draw.inventory.entity.InventoryImage;
@@ -13,19 +15,20 @@ import luckydrop.demo.draw.repository.DrawEntrySummaryRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.draw.inventory.InventoryImageRepository;
 import luckydrop.demo.draw.inventory.InventoryRepository;
-import luckydrop.demo.member.entity.Member;
+import luckydrop.demo.draw.repository.DrawWinnerRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-//Draw 쓰기용
 @Service
 @RequiredArgsConstructor
 public class DrawService {
 
+    private final DrawWinnerRepository drawWinnerRepository;
     private final DrawRepository drawRepository;
     private final InventoryRepository inventoryRepository;
     private final InventoryImageRepository inventoryImageRepository;
@@ -82,8 +85,10 @@ public class DrawService {
 
     }
 
+
     @Transactional
     public Long createDraw(Long userId, DrawCreateRequest req) {
+
         // 기본 검증
         validateDrawTime(req.getStartAt(), req.getEndAt());
         validateCounts(req.getTicketCostEntry(), req.getWinnerCount());
@@ -120,7 +125,6 @@ public class DrawService {
         }
         inventoryImageRepository.saveAll(images);
 
-        Member member = new Member();
         //Draw 생성/저장 (inventory 1개당 draw 1개 강제는 DB UNIQUE 가 최종 보루)
         Draw draw = Draw.builder()
                 .userId(userId)
@@ -131,7 +135,7 @@ public class DrawService {
                 .winnerCount(req.getWinnerCount())
                 .startAt(req.getStartAt())
                 .endAt(req.getEndAt())
-                .status(DrawStatus.ACTIVE)
+                .status(DrawStatus.DRAFT)
                 .build();
 
         //더블 클릭해서 중복 드로우가 될 것을 방지
@@ -144,14 +148,93 @@ public class DrawService {
         return draw.getId();
     }
 
+
+    public List<DrawWinner> drawWinner(Long drawId) {
+        Draw draw = drawRepository.findByIdForUpdate(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
+
+        if (draw.getStatus() != DrawStatus.DRAWING) {
+            throw new IllegalArgumentException("DRAWING 상태에서만 추첨을 시작할 수 있습니다.");
+        }
+
+        if (drawWinnerRepository.existsByDrawId(drawId)) {
+            throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
+        }
+
+        List<DrawEntrySummary.ParticipantWeight> candidates = drawEntrySummaryRepository.findWeights(drawId);
+        if (candidates.isEmpty()) {
+            throw new IllegalArgumentException("응모자가 없어 추첨할 수 없습니다.");
+        }
+
+        int winnerCount = draw.getWinnerCount();
+        if (winnerCount <= 0) {
+            throw new IllegalArgumentException("winnerCount가 올바르지 않습니다.");
+        }
+
+        int k  = Math.min(winnerCount, candidates.size());
+
+        List<Long> winnerUserIds = pickWeightedWinners(candidates, k);
+
+        List<DrawWinner> winners = new ArrayList<>();
+        for (int i = 0; i < winnerUserIds.size(); i++) {
+            winners.add(DrawWinner.builder()
+                    .drawId(drawId)
+                    .userId(winnerUserIds.get(i))
+                    .build());
+        }
+        drawWinnerRepository.saveAll(winners);
+
+        /*
+        2) 임시 추첨 완료 상태면 중복 실행 방지
+        지금 CLOSED면 이미 끝난 걸로 간주
+        나중에는 draw_winner 존재 여부로 정확히 막기
+         */
+
+        /*
+        * 여기에 실제 당첨자 선정 + draw_winner 저장
+        * 응모자 목록 조회
+        * 랜덤 셔플
+        * winnerCount 만큼 저장*/
+
+        // 추첨 끝났다고 가정하고 CLOSED 로 전환
+        draw.close();
+
+        return winners;
+    }
+
+    private List<Long> pickWeightedWinners(List<DrawEntrySummary.ParticipantWeight> candidates, int k) {
+        List<Scored> scored = new ArrayList<>(candidates.size());
+
+        for (DrawEntrySummary.ParticipantWeight c : candidates) {
+            long w = c.getEntryCount();
+            if (w <= 0) continue;
+
+            double u = Math.max(Math.random(), 1e-12);
+            double key = -Math.log(u) / (double) w;
+
+            scored.add(new Scored(c.getUserId(), key));
+        }
+
+        scored.sort(Comparator.comparingDouble(Scored::key));
+
+        return scored.stream()
+                .limit(k)
+                .map(Scored::userId)
+                .toList();
+    }
+
+    private record Scored(Long userId, double key) {}
+
+
     private void validateDrawTime(LocalDateTime startAt, LocalDateTime endAt) {
         if (startAt == null || endAt == null) {
             throw new IllegalArgumentException("시작시간/종료시간 입력은 필수");
         }
         if (!startAt.isBefore(endAt)) {
-            throw new IllegalArgumentException("시간 설정을 다시 해주세요");
+            throw new IllegalArgumentException("시간 설정을 다시 해주세요. 시작 시간은 현재보다 미래여야 합니다.");
         }
     }
+
 
     private void validateCounts(Integer ticketCostEntry, Integer winnerCount) {
         if (ticketCostEntry == null || ticketCostEntry < 1) {
@@ -162,6 +245,7 @@ public class DrawService {
             throw new IllegalArgumentException("당첨자 수는 1명 이상");
         }
     }
+
 
     private void validateImages(DrawCreateRequest req) {
         if (req.getProduct() == null || req.getProduct().getImages() == null || req.getProduct().getImages().isEmpty()) {

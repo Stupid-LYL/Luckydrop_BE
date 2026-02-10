@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
-import luckydrop.demo.member.entity.Member;
 
 import java.time.LocalDateTime;
 
@@ -100,7 +99,7 @@ public class Draw {
 
     // 드로우 종료
     public void close() {
-        status = DrawStatus.CLOSED;
+        status = DrawStatus.CLOSE;
     }
 
     //드로우 취소

@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table
 @IdClass(DrawEntrySummaryId.class)
@@ -37,5 +35,10 @@ public class DrawEntrySummary {
 
     public void increaseEntryCount() {
         this.entryCount++;
+    }
+
+    public interface ParticipantWeight {
+        Long getUserId();
+        Long getEntryCount();
     }
 }

@@ -18,11 +18,13 @@ public class DrawQueryController {
 
     private final DrawQueryService drawQueryService;
 
+    //전체 보기
     @GetMapping
     public Page<DrawSummaryResponse> getDraws(Pageable pageable) {
         return drawQueryService.getDraws(pageable);
     }
 
+    //상세 보기
     @GetMapping("/{drawId}")
     public DrawDetailResponse getDraw(@PathVariable Long drawId) {
         return drawQueryService.getDraw(drawId);

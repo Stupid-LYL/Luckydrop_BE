@@ -3,6 +3,7 @@ package luckydrop.demo.draw.enums;
 public enum DrawStatus {
     DRAFT,
     ACTIVE,
-    CLOSED,
+    DRAWING,
+    CLOSE,
     CANCELLED
 }
