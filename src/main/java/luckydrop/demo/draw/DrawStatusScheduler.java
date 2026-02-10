@@ -28,5 +28,9 @@ public class DrawStatusScheduler {
         if (activated > 0 || drawing > 0) {
             log.info("[DrawScheduler] DRAFT -> ACTIVE: {}, ACTIVE -> DRAWING: {}", activated, drawing);
         }
+
+        log.info("[DrawScheduler tick] now={}", now);
+        log.info("[DrawScheduler result] DRAFT->ACTIVE={}, ACTIVE->DRAWING={}", activated, drawing);
+
     }
 }

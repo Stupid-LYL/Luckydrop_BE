@@ -27,6 +27,7 @@ public class DrawCreateRequest {
     private final Integer winnerCount;
 
     @NotNull
+    @FutureOrPresent
     private final LocalDateTime startAt;
 
     @NotNull
@@ -72,4 +73,9 @@ public class DrawCreateRequest {
         private final Integer sortOrder;
     }
 
+    @AssertTrue(message = "endAt은 startAt 이후여야 합니다.")
+    public boolean isEndAfterStart() {
+        if (startAt == null || endAt == null) return true;
+        return endAt.isAfter(startAt);
+    }
 }

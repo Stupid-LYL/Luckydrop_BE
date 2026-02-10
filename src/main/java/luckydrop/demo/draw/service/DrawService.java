@@ -145,6 +145,7 @@ public class DrawService {
             throw new IllegalStateException("이미 이 상품으로 생성된 드로우가 있어요" ,e);
         }
 
+        System.out.println("드로우를 저장하였습니다.");
         return draw.getId();
     }
 
@@ -202,6 +203,7 @@ public class DrawService {
         return winners;
     }
 
+    // 당첨자 추첨 로직
     private List<Long> pickWeightedWinners(List<DrawEntrySummary.ParticipantWeight> candidates, int k) {
         List<Scored> scored = new ArrayList<>(candidates.size());
 
