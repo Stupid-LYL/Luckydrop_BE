@@ -1,11 +1,11 @@
-package luckydrop.demo.member.dto.response;
+package luckydrop.demo.user.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class MemberStatusDto {
+public class UserStatusDto {
 
         // 인증 여부
         private boolean authenticated;

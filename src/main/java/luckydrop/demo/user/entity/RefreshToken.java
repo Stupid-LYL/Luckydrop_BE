@@ -1,4 +1,4 @@
-package luckydrop.demo.member.entity;
+package luckydrop.demo.user.entity;
 
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -18,8 +18,8 @@ public class RefreshToken extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "refresh_token", nullable = false, length = 512)
     private String token;
@@ -28,9 +28,9 @@ public class RefreshToken extends BaseEntity {
     private LocalDateTime expiredAt;
 
     @Builder
-    private RefreshToken(Long id, Member member, String token, LocalDateTime expiredAt) {
+    private RefreshToken(Long id, User user, String token, LocalDateTime expiredAt) {
         this.id = id;
-        this.member = member;
+        this.user = user;
         this.token = token;
         this.expiredAt = expiredAt;
     }

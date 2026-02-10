@@ -1,4 +1,4 @@
-package luckydrop.demo.member.dto.request;
+package luckydrop.demo.user.dto.request;
 
 import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class MemberSaveReqDto {
+public class UserSaveReqDto {
     @Column(nullable = false)
     private String name;
 

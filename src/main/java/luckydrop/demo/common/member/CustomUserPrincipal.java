@@ -1,11 +1,9 @@
-package luckydrop.demo.common.user;
+package luckydrop.demo.common.member;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import luckydrop.demo.member.entity.Member;
+import luckydrop.demo.user.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,10 +12,10 @@ import java.util.List;
 @Getter
 public class CustomUserPrincipal implements UserDetails {
 
-    private final Member member;
+    private final User user;
     private final String registrationId;
-    public CustomUserPrincipal(Member member) {
-        this.member = member;
+    public CustomUserPrincipal(User user) {
+        this.user = user;
         this.registrationId = null;
     }
 
@@ -30,7 +28,7 @@ public class CustomUserPrincipal implements UserDetails {
     @Override
     public String getUsername() {
         if(registrationId == null) {
-            return member.getEmail();
+            return user.getEmail();
         }
         return null;
     }
@@ -38,7 +36,7 @@ public class CustomUserPrincipal implements UserDetails {
     @Override
     public String getPassword() {
         if(registrationId == null) {
-            return member.getName();
+            return user.getName();
         }
         return null;
     }

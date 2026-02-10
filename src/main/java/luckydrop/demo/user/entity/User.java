@@ -1,4 +1,4 @@
-package luckydrop.demo.member.entity;
+package luckydrop.demo.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,13 +6,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import luckydrop.demo.common.BaseEntity;
+import luckydrop.demo.ticket.entity.TicketWallet;
+import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
 
 @Entity
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-public class Member extends BaseEntity {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,4 +48,19 @@ public class Member extends BaseEntity {
     @Builder.Default
     private String status = "ACTIVE";
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private TicketWallet ticketWallet;
+
+    public ProfileUpdateReqDto.ProfileUpdateReqDtoBuilder toProfileUpdateReqDto() {
+        return ProfileUpdateReqDto.builder()
+                .phone(this.phone)
+                .address(this.address)
+                .nickname(this.nickname);
+    }
+
+    public void edit(ProfileUpdateReqDto profileUpdateReqDto) {
+        this.phone = profileUpdateReqDto.getPhone();
+        this.address = profileUpdateReqDto.getAddress();
+        this.nickname = profileUpdateReqDto.getNickname();
+    }
 }

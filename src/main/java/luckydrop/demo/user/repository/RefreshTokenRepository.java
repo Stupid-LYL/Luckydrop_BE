@@ -1,6 +1,6 @@
-package luckydrop.demo.member.repository;
+package luckydrop.demo.user.repository;
 
-import luckydrop.demo.member.entity.RefreshToken;
+import luckydrop.demo.user.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
