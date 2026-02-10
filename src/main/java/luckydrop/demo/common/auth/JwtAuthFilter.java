@@ -1,32 +1,20 @@
 package luckydrop.demo.common.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import jakarta.servlet.*;
-import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.common.service.CustomUserDetailsService;
-import luckydrop.demo.common.user.CustomUserPrincipal;
+import luckydrop.demo.common.member.CustomUserPrincipal;
 import luckydrop.demo.common.util.CookieUtil;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.security.sasl.AuthenticationException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Component
@@ -48,21 +36,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
 
         // 인증이 필요 없는 경로는 필터 건너뜀
-        if (uri.startsWith("/api/auth/verify") || uri.startsWith("/api/auth/join")
-                || uri.startsWith("/api/auth/send-verification-email")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+//        if (uri.startsWith("/api/user/verify") || uri.startsWith("/api/user/join")
+//                || uri.startsWith("/api/user/send-verification-email")) {
+//            filterChain.doFilter(request, response);
+//            return;
+//        }
 
         // 토큰 가져오고 없으면 null
 //        String accessToken = cookieUtil.getCookie(request, "accessToken")
 //                .map(Cookie::getValue)
 //                .orElse(null);
-        String jwtToken = request.getHeader("Authorization");
         String accessToken = null;
+        String jwtToken = request.getHeader("Authorization");
 
         if (jwtToken != null && jwtToken.startsWith("Bearer ")) {
             accessToken = jwtToken.substring(7); // "Bearer " 제거
+        }
+
+        if (accessToken == null) {
+            accessToken = cookieUtil.getCookie(request, "accessToken")
+                    .map(Cookie::getValue)
+                    .orElse(null);
         }
 
 
