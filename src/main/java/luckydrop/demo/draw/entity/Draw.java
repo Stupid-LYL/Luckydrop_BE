@@ -1,0 +1,121 @@
+package luckydrop.demo.draw.entity;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import luckydrop.demo.draw.enums.DrawStatus;
+import luckydrop.demo.draw.inventory.entity.Inventory;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(
+        name = "draw",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_draw_inventory", columnNames = "inventory_id")
+        }
+)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Draw {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    //상품 정보
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "inventory_id", nullable = false)
+    private Inventory inventory;
+
+    //드로우 이름
+    @Column(length = 120, nullable = false)
+    private String title;
+
+    //드로우 설명
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "winner_count", nullable = false)
+    private Integer winnerCount;
+
+    @Column(name = "ticket_cost_entry", nullable = false)
+    private Integer ticketCostEntry;
+
+    @Column(name = "start_at", nullable = false)
+    private LocalDateTime startAt;
+
+    @Column(name = "end_at", nullable = false)
+    private LocalDateTime endAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    private DrawStatus status;
+
+    @Column(name = "end_at_changed", nullable = false)
+    private boolean endAtChanged;
+
+
+    //private LocalDateTime createdAt;
+
+    @Builder
+    public Draw(
+                Long userId,
+                Inventory inventory,
+                String title,
+                String description,
+                Integer winnerCount,
+                Integer ticketCostEntry,
+                LocalDateTime startAt,
+                LocalDateTime endAt,
+                DrawStatus status) {
+        this.userId = userId;
+        this.inventory =  inventory;
+        this.title = title;
+        this.description = description;
+        this.winnerCount = winnerCount;
+        this.ticketCostEntry = ticketCostEntry;
+        this.startAt = startAt;
+        this.endAt = endAt;
+
+        this.status = (status != null) ? status : DrawStatus.DRAFT;
+        this.endAtChanged = false;
+    }
+
+    // ==== 도메인 로직 ====
+
+    //현재 시각 기준 진행중인지
+    public boolean inActive(LocalDateTime now) {
+        return status == DrawStatus.ACTIVE
+                && !now.isBefore(startAt)
+                && now.isBefore(endAt);
+    }
+
+    // 드로우 종료
+    public void close() {
+        status = DrawStatus.CLOSE;
+    }
+
+    //드로우 취소
+    public void cancel() {
+        status = DrawStatus.CANCELLED;
+    }
+
+    public void changeDescription(String description) {
+        this.description = description;
+    }
+
+    public void changeEndAt(LocalDateTime endAt) {
+        this.endAt = endAt;
+    }
+
+    public void markEndAtChanged() {
+        this.endAtChanged = true;
+    }
+}
