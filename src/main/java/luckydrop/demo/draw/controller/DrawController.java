@@ -43,4 +43,12 @@ public class DrawController {
         drawService.drawWinner(drawId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDraw(@PathVariable("id") Long id,
+                                           @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        drawService.cancelDraw(id, principal.getMember().getId());
+        return ResponseEntity.noContent().build(); //204
+    }
 }

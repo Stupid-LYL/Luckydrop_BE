@@ -2,6 +2,9 @@ package luckydrop.demo.draw.repository;
 
 import jakarta.persistence.LockModeType;
 import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.draw.enums.DrawStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,6 +16,10 @@ import java.util.Optional;
 
 public interface DrawRepository extends JpaRepository<Draw, Long> {
     boolean existsByInventoryId(Long inventoryId); // inventory_id UNIQUE 체크용
+
+    Page<Draw> findAllByStatusNot(DrawStatus status, Pageable pageable);
+
+    Optional<Draw> findByIdAndStatusNot(Long id, DrawStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from Draw d where d.id = :id")
