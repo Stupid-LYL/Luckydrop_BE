@@ -7,6 +7,7 @@ import luckydrop.demo.common.auth.JwtTokenProvider;
 import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
 import luckydrop.demo.user.dto.request.UserLoginReqDto;
 import luckydrop.demo.user.dto.request.UserSaveReqDto;
+import luckydrop.demo.user.dto.response.UserDetailResDto;
 import luckydrop.demo.user.dto.response.UserListResDto;
 import luckydrop.demo.user.dto.response.UserInfoResDto;
 import luckydrop.demo.user.entity.User;
@@ -216,5 +217,21 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         return new UserInfoResDto(user);
+    }
+
+    public UserDetailResDto getUserDetail(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        return UserDetailResDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .nickname(user.getNickname())
+                .name(user.getName())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .role(user.getRole().name())
+                .createdAt(user.getCreatedAt())
+                .build();
     }
 }

@@ -11,4 +11,6 @@ import java.util.List;
 public interface TicketLedgerRepository extends JpaRepository<TicketLedger, Integer> {
 
     List<TicketLedger> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
+    boolean existsByIdempotencyKey(String idempotencyKey);
 }

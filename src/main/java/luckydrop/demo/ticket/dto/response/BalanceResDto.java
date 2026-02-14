@@ -1,4 +1,4 @@
-package luckydrop.demo.ticket.dto.request;
+package luckydrop.demo.ticket.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
