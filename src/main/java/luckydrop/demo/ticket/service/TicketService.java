@@ -1,7 +1,12 @@
 package luckydrop.demo.ticket.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import luckydrop.demo.ticket.dto.request.TicketAdjustReqDto;
+import luckydrop.demo.ticket.dto.request.TicketEarnReqDto;
+import luckydrop.demo.ticket.dto.request.TicketUseReqDto;
 import luckydrop.demo.ticket.dto.response.LedgerItemResDto;
+import luckydrop.demo.ticket.dto.response.TicketTransactionResDto;
 import luckydrop.demo.ticket.dto.response.WalletResDto;
 import luckydrop.demo.ticket.entity.TicketLedger;
 import luckydrop.demo.ticket.entity.TicketWallet;
@@ -16,11 +21,13 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class TicketService {
 
     private final TicketWalletRepository ticketWalletRepository;
     private final TicketLedgerRepository ticketLedgerRepository;
+    private final UserRepository userRepository;
 
     private TicketWallet getWallet(Long userId) {
         return ticketWalletRepository.findByUserId(userId)
@@ -54,6 +61,167 @@ public class TicketService {
                         .build()
                 )
                 .toList();
+    }
+
+    @Transactional
+    public TicketTransactionResDto earnTickets(TicketEarnReqDto request) {
+        // 멱등성 체크
+        if (ticketLedgerRepository.existsByIdempotencyKey(request.getIdempotencyKey())) {
+            throw new IllegalStateException("이미 처리된 요청입니다.");
+        }
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        TicketWallet wallet = ticketWalletRepository.findByUserIdWithLock(request.getUserId())
+                .orElseGet(() -> {
+                    TicketWallet newWallet = TicketWallet.builder()
+                            .user(user)
+                            .balance(0)
+                            .build();
+                    return ticketWalletRepository.save(newWallet);
+                });
+
+        // 잔액 증가
+        int newBalance = wallet.getBalance() + request.getAmount();
+        TicketWallet updatedWallet = TicketWallet.builder()
+                .id(wallet.getId())
+                .user(wallet.getUser())
+                .balance(newBalance)
+                .build();
+        ticketWalletRepository.save(updatedWallet);
+
+        // 내역 기록
+        TicketLedger ledger = TicketLedger.builder()
+                .user(user)
+                .type("EARN")
+                .amount(request.getAmount())
+                .reason(request.getReason())
+                .refType(request.getRefType())
+                .refId(request.getRefId())
+                .idempotencyKey(request.getIdempotencyKey())
+                .build();
+        ticketLedgerRepository.save(ledger);
+
+        log.info("티켓 적립 완료 - userId: {}, amount: {}, balance: {}",
+                request.getUserId(), request.getAmount(), newBalance);
+
+        return TicketTransactionResDto.builder()
+                .success(true)
+                .userId(request.getUserId())
+                .transactionType("EARN")
+                .amount(request.getAmount())
+                .previousBalance(wallet.getBalance())
+                .currentBalance(newBalance)
+                .ledgerId(ledger.getId())
+                .build();
+    }
+
+    @Transactional
+    public TicketTransactionResDto useTickets(TicketUseReqDto request) {
+        // 멱등성 체크
+        if (ticketLedgerRepository.existsByIdempotencyKey(request.getIdempotencyKey())) {
+            throw new IllegalStateException("이미 처리된 요청입니다.");
+        }
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        TicketWallet wallet = ticketWalletRepository.findByUserIdWithLock(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("지갑을 찾을 수 없습니다."));
+
+        // 잔액 확인
+        if (wallet.getBalance() < request.getAmount()) {
+            throw new IllegalStateException("티켓이 부족합니다.");
+        }
+
+        // 잔액 차감
+        int newBalance = wallet.getBalance() - request.getAmount();
+        TicketWallet updatedWallet = TicketWallet.builder()
+                .id(wallet.getId())
+                .user(wallet.getUser())
+                .balance(newBalance)
+                .build();
+        ticketWalletRepository.save(updatedWallet);
+
+        // 내역 기록
+        TicketLedger ledger = TicketLedger.builder()
+                .user(user)
+                .type("USE")
+                .amount(-request.getAmount())  // 음수로 저장
+                .reason(request.getReason())
+                .refType(request.getRefType())
+                .refId(request.getRefId())
+                .idempotencyKey(request.getIdempotencyKey())
+                .build();
+        ticketLedgerRepository.save(ledger);
+
+        log.info("티켓 사용 완료 - userId: {}, amount: {}, balance: {}",
+                request.getUserId(), request.getAmount(), newBalance);
+
+        return TicketTransactionResDto.builder()
+                .success(true)
+                .userId(request.getUserId())
+                .transactionType("USE")
+                .amount(request.getAmount())
+                .previousBalance(wallet.getBalance())
+                .currentBalance(newBalance)
+                .ledgerId(ledger.getId())
+                .build();
+    }
+
+    @Transactional
+    public TicketTransactionResDto adjustTickets(TicketAdjustReqDto request) {
+        // 멱등성 체크
+        if (ticketLedgerRepository.existsByIdempotencyKey(request.getIdempotencyKey())) {
+            throw new IllegalStateException("이미 처리된 요청입니다.");
+        }
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        TicketWallet wallet = ticketWalletRepository.findByUserIdWithLock(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("지갑을 찾을 수 없습니다."));
+
+        int previousBalance = wallet.getBalance();
+        int newBalance = previousBalance + request.getAmount();
+
+        // 음수 방지
+        if (newBalance < 0) {
+            throw new IllegalStateException("조정 후 잔액이 음수가 될 수 없습니다.");
+        }
+
+        TicketWallet updatedWallet = TicketWallet.builder()
+                .id(wallet.getId())
+                .user(wallet.getUser())
+                .balance(newBalance)
+                .build();
+        ticketWalletRepository.save(updatedWallet);
+
+        // 내역 기록
+        TicketLedger ledger = TicketLedger.builder()
+                .user(user)
+                .type("ADJUST")
+                .amount(request.getAmount())
+                .reason(request.getReason())
+                .refType("ADMIN")
+                .refId(request.getAdminId())
+                .idempotencyKey(request.getIdempotencyKey())
+                .build();
+        ticketLedgerRepository.save(ledger);
+
+        log.info("티켓 조정 완료 - userId: {}, amount: {}, balance: {}",
+                request.getUserId(), request.getAmount(), newBalance);
+
+        return TicketTransactionResDto.builder()
+                .success(true)
+                .userId(request.getUserId())
+                .transactionType("ADJUST")
+                .amount(request.getAmount())
+                .previousBalance(previousBalance)
+                .currentBalance(newBalance)
+                .ledgerId(ledger.getId())
+                .build();
     }
 
 }

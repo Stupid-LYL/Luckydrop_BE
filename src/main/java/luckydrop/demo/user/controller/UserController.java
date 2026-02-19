@@ -12,10 +12,7 @@ import luckydrop.demo.common.util.CookieUtil;
 import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
 import luckydrop.demo.user.dto.request.UserLoginReqDto;
 import luckydrop.demo.user.dto.request.UserSaveReqDto;
-import luckydrop.demo.user.dto.response.UserListResDto;
-import luckydrop.demo.user.dto.response.UserProfileResDto;
-import luckydrop.demo.user.dto.response.UserStatusDto;
-import luckydrop.demo.user.dto.response.UserInfoResDto;
+import luckydrop.demo.user.dto.response.*;
 import luckydrop.demo.user.entity.User;
 import luckydrop.demo.user.service.UserService;
 import org.springframework.context.annotation.Profile;
@@ -114,5 +111,15 @@ public class UserController {
         UserInfoResDto updatedUserInfo = userService.getUserInfo(principal.getUser().getId());
 
         return new ResponseEntity<>(updatedUserInfo, HttpStatus.OK);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDetailResDto> getUserDetail(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        Long userId = principal.getUser().getId(); // JWT에서 userId 추출
+        UserDetailResDto userDetail = userService.getUserDetail(userId);
+
+        return new ResponseEntity<>(userDetail, HttpStatus.OK);
     }
 }
