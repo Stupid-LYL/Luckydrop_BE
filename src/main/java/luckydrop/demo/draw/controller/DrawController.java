@@ -2,7 +2,7 @@ package luckydrop.demo.draw.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import luckydrop.demo.common.user.CustomUserPrincipal;
+import luckydrop.demo.common.member.CustomUserPrincipal;
 import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawCreateResponse;
@@ -24,7 +24,7 @@ public class DrawController {
     public ResponseEntity<DrawCreateResponse> createDraw(@RequestBody @Valid DrawCreateRequest request,
                                                          @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        Long userId = principal.getMember().getId();
+        Long userId = principal.getUser().getId();
         Long drawId = drawService.createDraw(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(DrawCreateResponse.of(drawId));
