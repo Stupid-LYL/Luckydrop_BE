@@ -1,4 +1,4 @@
-package luckydrop.demo.draw.repository;
+package luckydrop.demo.entry.repository;
 
 import luckydrop.demo.draw.entity.DrawEntrySummary;
 import luckydrop.demo.draw.entity.DrawEntrySummaryId;

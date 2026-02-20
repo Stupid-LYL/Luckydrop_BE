@@ -21,9 +21,15 @@ public class EntryController {
     public ResponseEntity<DrawEntryResponse> enter(
             @PathVariable Long drawId,
             @Valid @RequestBody DrawEntryRequest req,
+            @RequestHeader(value = "Idempotency-Key", required = true) String idempotencyKey,
             @AuthenticationPrincipal CustomUserPrincipal principal
             ) {
-        DrawEntryResponse res = drawEntryService.enter(drawId, principal.getUser().getId(), req.getCount());
+        DrawEntryResponse res = drawEntryService.enter(
+                drawId,
+                principal.getUser().getId(),
+                req.getCount(),
+                idempotencyKey
+        );
         return ResponseEntity.ok(res);
     }
 }

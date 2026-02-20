@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface DrawRepository extends JpaRepository<Draw, Long> {
+
     boolean existsByInventoryId(Long inventoryId); // inventory_id UNIQUE 체크용
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
