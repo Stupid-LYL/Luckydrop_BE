@@ -1,8 +1,9 @@
-package luckydrop.demo.draw.repository;
+package luckydrop.demo.entry.repository;
 
 import luckydrop.demo.draw.entity.DrawEntrySummary;
 import luckydrop.demo.draw.entity.DrawEntrySummaryId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,4 +25,22 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
         where d.drawId = :drawId and d.entryCount > 0
 """)
     List<DrawEntrySummary.ParticipantWeight> findWeights(@Param("drawId") Long drawId);
+
+    @Modifying
+    @Query(value = """
+            INSERT INTO draw_entry_summary (draw_id, user_id, entry_count)
+            VALUES (:drawId, :userId, :count)
+            ON DUPLICATE KEY UPDATE entry_count = entry_count + :count
+            """, nativeQuery = true)
+    int upsertIncrease(@Param("drawId") Long drawId,
+                       @Param("userId") Long userId,
+                       @Param("count") int count);
+
+    @Query(value = """
+            SELECT entry_count
+            FROM draw_entry_summary
+            WHERE draw_id = :drawId AND user_id = :userId
+            """, nativeQuery = true)
+    Long findEntryCount(@Param("drawId") Long drawId,
+                        @Param("userId") Long userId);
 }

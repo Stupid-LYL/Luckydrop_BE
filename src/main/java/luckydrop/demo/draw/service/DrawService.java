@@ -11,7 +11,7 @@ import luckydrop.demo.draw.entity.DrawWinner;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
 import luckydrop.demo.draw.inventory.entity.InventoryImage;
-import luckydrop.demo.draw.repository.DrawEntrySummaryRepository;
+import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.draw.inventory.InventoryImageRepository;
 import luckydrop.demo.draw.inventory.InventoryRepository;
