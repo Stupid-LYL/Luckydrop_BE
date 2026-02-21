@@ -1,5 +1,6 @@
 package luckydrop.demo.entry.service;
 
+import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.ticket.dto.request.TicketUseReqDto;
 import org.springframework.transaction.annotation.Transactional;
 import luckydrop.demo.draw.entity.Draw;
@@ -23,12 +24,6 @@ public class DrawEntryService {
     //정책값: 1회 최대 응모수
     //private static final int MAX_ENTRY_PER_REQUEST = 1000;
 
-    /**
-     * @param drawId
-     * @param userId
-     * @param count 응모 장수(>=1)
-     */
-
     @Transactional
     public DrawEntryResponse enter(Long drawId, Long userId, int count, String idempotencyKey) {
 
@@ -39,9 +34,11 @@ public class DrawEntryService {
         // 정책 검증
         validateEnterable(draw, userId, LocalDateTime.now());
 
-        // 필요 티켓 계산
-        long totalCostLong = Math.multiplyExact((long) draw.getTicketCostEntry(), (long) count);
+        // 1회 응모당 티켓 비용
+        int ticketPerEntry = draw.getTicketCostEntry();
 
+        // 이번 요청에서 총 사용 티켓(= 가중치)
+        long totalCostLong = Math.multiplyExact((long) ticketPerEntry, (long) count);
         if (totalCostLong > Integer.MAX_VALUE) {
             throw new IllegalStateException("ticket cost too large");
         }
@@ -58,16 +55,18 @@ public class DrawEntryService {
                         .idempotencyKey(idempotencyKey)
                         .build());
 
-        //응모 누적 upsert
-        entrySummaryRepository.upsertIncrease(drawId, userId, count);
+        // 총 사용한 티켓
+        entrySummaryRepository.upsertIncrease(drawId, userId, totalCost);
 
-        long totalCount = getCurrentEntryCount(drawId, userId);
+        // 누적 사용 티켓
+        long spentTicketsTotal = getCurrentEntryCount(drawId, userId);
 
         return DrawEntryResponse.builder()
                 .drawId(drawId)
                 .userId(userId)
-                .addedCount(count)
-                .totalCount(totalCount)
+                .spentTicketsAdded(totalCost) // 이번에 쓴 티켓
+                .spentTicketsTotal(spentTicketsTotal) // 누적 티켓
+                .entryTimesAdded(count) // 이번 응모 횟수
                 .build();
     }
 
@@ -84,7 +83,7 @@ public class DrawEntryService {
         }
 
         // ACTIVE 상태만 가능
-        if (!"ACTIVE".equals(String.valueOf(draw.getStatus()))) {
+        if (draw.getStatus() != DrawStatus.ACTIVE) {
             throw new IllegalStateException("draw not active. status= " + draw.getStatus());
         }
 
