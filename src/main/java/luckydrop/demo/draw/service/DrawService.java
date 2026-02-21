@@ -18,6 +18,7 @@ import luckydrop.demo.draw.inventory.InventoryRepository;
 import luckydrop.demo.draw.repository.DrawWinnerRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -147,6 +148,19 @@ public class DrawService {
 
         System.out.println("드로우를 저장하였습니다.");
         return draw.getId();
+    }
+
+    @Transactional
+    public void cancelDraw(Long drawId, Long requesterUserId) {
+        Draw draw = drawRepository.findByIdForUpdate(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다. id=" + drawId));
+
+        // host만 삭제 가능
+        if (draw.getUserId() == null || !draw.getUserId().equals(requesterUserId)) {
+            throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
+        }
+
+        draw.cancel();
     }
 
 
