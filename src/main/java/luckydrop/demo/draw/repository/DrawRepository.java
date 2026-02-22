@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface DrawRepository extends JpaRepository<Draw, Long> {
@@ -43,6 +44,23 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
             and d.endAt <= :now
     """)
     int updateActiveToDrawing(@Param("now") LocalDateTime now);
+
+    @Modifying
+    @Query("""
+        update Draw d
+        set d.status = 'CLOSED'
+        where d.id = :drawId
+            and d.status = 'DRAWING'
+    """)
+    int updateDrawingToClosed(@Param("drawId") Long drawId);
+
+    @Query("""
+    select d from Draw d
+    where d.status = :status
+        and d.endAt <= :now
+""")
+    List<Draw> findReadyForDrawing(@Param("status") DrawStatus status,
+                                   @Param("now") LocalDateTime now);
 }
 
 

@@ -7,11 +7,14 @@ import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawCreateResponse;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
+import luckydrop.demo.draw.dto.response.DrawWinnerResponse;
 import luckydrop.demo.draw.service.DrawService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -48,7 +51,12 @@ public class DrawController {
     public ResponseEntity<Void> deleteDraw(@PathVariable("id") Long id,
                                            @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        drawService.cancelDraw(id, principal.getMember().getId());
+        drawService.cancelDraw(id, principal.getUser().getId());
         return ResponseEntity.noContent().build(); //204
+    }
+
+    @GetMapping("/{drawId}/winners")
+    public ResponseEntity<DrawWinnerResponse> getWinner(@PathVariable Long drawId) {
+        return ResponseEntity.ok(drawService.getWinner(drawId));
     }
 }
