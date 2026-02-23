@@ -36,7 +36,7 @@ public class DrawService {
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
 
     @Transactional
-    public DrawDetailResponse updateDraw(Long drawId, DrawUpdateRequest request) {
+    public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
         Draw draw = drawRepository.findById(drawId)
                 .orElseThrow(() ->  new IllegalArgumentException("드로우가 존재하지 않습니다."));
 
@@ -55,6 +55,10 @@ public class DrawService {
         long totalEntries = drawEntrySummaryRepository.countParticipants(drawId);
         if (totalEntries > 0) {
             throw new IllegalArgumentException("응모자가 발생한 드로우는 수정할 수 없습니다.");
+        }
+
+        if (!draw.getUserId().equals(requesterUserId)) {
+            throw new AccessDeniedException("해당 드로우를 생성한 HOST만 수정할 수 있습니다.");
         }
 
         // 4. description 수정
@@ -158,6 +162,10 @@ public class DrawService {
         // host만 삭제 가능
         if (draw.getUserId() == null || !draw.getUserId().equals(requesterUserId)) {
             throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
+        }
+
+        if (draw.getStatus() != DrawStatus.DRAFT) {
+            throw new IllegalArgumentException("시작 시간 전의 드로우만 취소할 수 있습니다.");
         }
 
         draw.cancel();
