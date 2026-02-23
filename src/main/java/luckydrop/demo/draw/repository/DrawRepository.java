@@ -48,7 +48,7 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
     @Modifying
     @Query("""
         update Draw d
-        set d.status = 'CLOSED'
+        set d.status = 'CLOSE'
         where d.id = :drawId
             and d.status = 'DRAWING'
     """)
