@@ -34,14 +34,12 @@ public class EmailController {
 
     // 인증번호 확인
     @PostMapping("/signup/emailAuth")
-    public ResponseEntity<String> authCheck(
-            @RequestBody @Valid EmailCheckDto emailCheckDto) {
-        boolean checked = emailService.checkAuthNum(
-                emailCheckDto.getEmail(), emailCheckDto.getAuthNum());
+    public ResponseEntity<String> authCheck(@RequestBody @Valid EmailCheckDto emailCheckDto) {
+        boolean checked = emailService.checkJoinAuthNum(emailCheckDto.getEmail(), emailCheckDto.getAuthNum());
         if (checked) {
-            return ResponseEntity.ok("이메일 인증 성공!");
+            return ResponseEntity.ok("인증 성공");
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("인증 실패");
+        throw new IllegalArgumentException("인증번호가 일치하지 않습니다.");
     }
 }
 

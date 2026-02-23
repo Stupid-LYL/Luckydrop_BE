@@ -35,7 +35,8 @@ public class Securityconfigs {
                 .authorizeHttpRequests(a -> a.requestMatchers("/api/user/create", "/api/user/login", "/api/user/logout",
                         "/api/user/token/reissue" ,"/api/ticket/ledger/**", "/api/ticket/wallet/**",
                         "/api/ticket/use", "/api/ticket/earn", "/api/ticket/adjust",
-                        "/api/signup/email", "/api/signup/emailAuth").permitAll().anyRequest().authenticated())
+                        "/api/signup/email", "/api/signup/emailAuth",
+                        "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password").permitAll().anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //세션방식을 사용하지 않겠다 라는 의미
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

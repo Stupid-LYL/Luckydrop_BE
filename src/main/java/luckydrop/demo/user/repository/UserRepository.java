@@ -12,4 +12,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     boolean existsByNickname(@Size(min = 2, message = "닉네임은 최소 2자 이상이어야 합니다.") String nickname);
+
+    boolean existsByEmail(String email);
 }
