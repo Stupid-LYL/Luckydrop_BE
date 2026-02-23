@@ -229,11 +229,6 @@ public class DrawService {
             throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
         }
 
-        List<DrawEntrySummary.ParticipantWeight> candidates = drawEntrySummaryRepository.findWeights(drawId);
-        if (candidates.isEmpty()) {
-            throw new IllegalArgumentException("응모자가 없어 추첨할 수 없습니다.");
-        }
-
         int winnerCount = draw.getWinnerCount();
         if (winnerCount <= 0) {
             throw new IllegalArgumentException("winnerCount가 올바르지 않습니다.");
