@@ -38,8 +38,7 @@ public class DrawService {
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
 
     @Transactional
-    public DrawDetailResponse updateDraw(Long drawId, DrawUpdateRequest request) {
-
+    public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
         Draw draw = drawRepository.findById(drawId)
                 .orElseThrow(() ->  new IllegalArgumentException("드로우가 존재하지 않습니다."));
 
@@ -58,6 +57,10 @@ public class DrawService {
         long totalEntries = drawEntrySummaryRepository.countParticipants(drawId);
         if (totalEntries > 0) {
             throw new IllegalArgumentException("응모자가 발생한 드로우는 수정할 수 없습니다.");
+        }
+
+        if (!draw.getUserId().equals(requesterUserId)) {
+            throw new AccessDeniedException("해당 드로우를 생성한 HOST만 수정할 수 있습니다.");
         }
 
         // 4. description 수정
@@ -164,6 +167,10 @@ public class DrawService {
             throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
         }
 
+        if (draw.getStatus() != DrawStatus.DRAFT) {
+            throw new IllegalArgumentException("시작 시간 전의 드로우만 취소할 수 있습니다.");
+        }
+
         draw.cancel();
     }
 
@@ -214,12 +221,26 @@ public class DrawService {
         Draw draw = drawRepository.findByIdForUpdate(drawId)
                 .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
 
+        if (draw.getStatus() != DrawStatus.DRAWING) {
+            throw new IllegalArgumentException("DRAWING 상태에서만 추첨을 시작할 수 있습니다.");
+        }
+
+        if (drawWinnerRepository.existsByDrawId(drawId)) {
+            throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
+        }
+
+        List<DrawEntrySummary.ParticipantWeight> candidates = drawEntrySummaryRepository.findWeights(drawId);
+        if (candidates.isEmpty()) {
+            throw new IllegalArgumentException("응모자가 없어 추첨할 수 없습니다.");
+        }
+
         int winnerCount = draw.getWinnerCount();
         if (winnerCount <= 0) {
             throw new IllegalArgumentException("winnerCount가 올바르지 않습니다.");
         }
 
         int k  = Math.min(winnerCount, candidates.size());
+
         List<Long> winnerUserIds = pickWeightedWinners(candidates, k);
 
         List<DrawWinner> winners = new ArrayList<>();
