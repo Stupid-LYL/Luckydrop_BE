@@ -33,9 +33,12 @@ public class DrawController {
     @PatchMapping("/{drawId}")
     public DrawDetailResponse updateDraw(
             @PathVariable Long drawId,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @RequestBody @Valid DrawUpdateRequest request
             ) {
-        return drawService.updateDraw(drawId, request);
+        Long requesterUserId = principal.getUser().getId();
+
+        return drawService.updateDraw(drawId, requesterUserId, request);
     }
 
     @PostMapping("/{drawId}/draw")
@@ -48,7 +51,9 @@ public class DrawController {
     public ResponseEntity<Void> deleteDraw(@PathVariable("id") Long id,
                                            @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        drawService.cancelDraw(id, principal.getMember().getId());
+        Long requesterUserId = principal.getUser().getId();
+
+        drawService.cancelDraw(id, requesterUserId);
         return ResponseEntity.noContent().build(); //204
     }
 }
