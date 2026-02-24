@@ -86,7 +86,7 @@ public class DrawService {
             draw.markEndAtChanged();
         }
 
-        return DrawDetailResponse.from(draw);
+        return DrawDetailResponse.from(draw, false);
 
     }
 
