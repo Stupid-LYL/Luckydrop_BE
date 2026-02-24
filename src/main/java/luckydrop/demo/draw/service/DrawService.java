@@ -221,10 +221,6 @@ public class DrawService {
         Draw draw = drawRepository.findByIdForUpdate(drawId)
                 .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
 
-        if (draw.getStatus() != DrawStatus.DRAWING) {
-            throw new IllegalArgumentException("DRAWING 상태에서만 추첨을 시작할 수 있습니다.");
-        }
-
         if (drawWinnerRepository.existsByDrawId(drawId)) {
             throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
         }
