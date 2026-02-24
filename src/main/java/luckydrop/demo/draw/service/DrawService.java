@@ -2,6 +2,7 @@ package luckydrop.demo.draw.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DrawService {
@@ -233,6 +235,8 @@ public class DrawService {
         int k  = Math.min(winnerCount, candidates.size());
 
         List<Long> winnerUserIds = pickWeightedWinners(candidates, k);
+
+        log.info("[Draw] drawId={} winners={}", drawId, winnerUserIds);
 
         List<DrawWinner> winners = new ArrayList<>();
         for (Long userId : winnerUserIds) {
