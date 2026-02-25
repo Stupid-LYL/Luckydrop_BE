@@ -2,9 +2,12 @@ package luckydrop.demo.draw.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
+import luckydrop.demo.draw.dto.response.DrawWinnerResponse;
+import luckydrop.demo.draw.dto.response.MyWinResponse;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.entity.DrawEntrySummary;
 import luckydrop.demo.draw.entity.DrawWinner;
@@ -25,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DrawService {
@@ -36,7 +40,7 @@ public class DrawService {
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
 
     @Transactional
-    public DrawDetailResponse updateDraw(Long drawId, DrawUpdateRequest request) {
+    public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
         Draw draw = drawRepository.findById(drawId)
                 .orElseThrow(() ->  new IllegalArgumentException("드로우가 존재하지 않습니다."));
 
@@ -55,6 +59,10 @@ public class DrawService {
         long totalEntries = drawEntrySummaryRepository.countParticipants(drawId);
         if (totalEntries > 0) {
             throw new IllegalArgumentException("응모자가 발생한 드로우는 수정할 수 없습니다.");
+        }
+
+        if (!draw.getUserId().equals(requesterUserId)) {
+            throw new AccessDeniedException("해당 드로우를 생성한 HOST만 수정할 수 있습니다.");
         }
 
         // 4. description 수정
@@ -152,6 +160,7 @@ public class DrawService {
 
     @Transactional
     public void cancelDraw(Long drawId, Long requesterUserId) {
+
         Draw draw = drawRepository.findByIdForUpdate(drawId)
                 .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다. id=" + drawId));
 
@@ -160,25 +169,62 @@ public class DrawService {
             throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
         }
 
+        if (draw.getStatus() != DrawStatus.DRAFT) {
+            throw new IllegalArgumentException("시작 시간 전의 드로우만 취소할 수 있습니다.");
+        }
+
         draw.cancel();
     }
 
+    public List<MyWinResponse> getMyWins(Long userId) {
+        return drawWinnerRepository.findByUserId(userId).stream()
+                .map(w -> MyWinResponse.builder()
+                        .drawId(w.getDrawId())
+                        .build())
+                .toList();
+    }
 
-    public List<DrawWinner> drawWinner(Long drawId) {
-        Draw draw = drawRepository.findByIdForUpdate(drawId)
+    @Transactional
+    public DrawWinnerResponse getWinner(Long drawId) {
+
+        Draw draw = drawRepository.findById(drawId)
                 .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
 
-        if (draw.getStatus() != DrawStatus.DRAWING) {
-            throw new IllegalArgumentException("DRAWING 상태에서만 추첨을 시작할 수 있습니다.");
+        // 정책: CLOSED일 때만 공개
+        if (draw.getStatus() != DrawStatus.CLOSE) {
+            throw new IllegalArgumentException("아직 추첨 결과가 공개되지 않았습니다.");
         }
 
-        if (drawWinnerRepository.existsByDrawId(drawId)) {
-            throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
+        List<Long> winnersUserIds = drawWinnerRepository.findByDrawId(drawId).stream()
+                .map(DrawWinner::getUserId)
+                .toList();
+
+        return DrawWinnerResponse.builder()
+                .drawId(drawId)
+                .winnersUserIds(winnersUserIds)
+                .build();
+    }
+
+    @Transactional
+    public List<DrawWinner> drawWinner(Long drawId) {
+
+        // DRAWING이면 CLOSED로 바꾼다"를 원자적으로 실행
+        int updated = drawRepository.updateDrawingToClosed(drawId);
+        if (updated == 0) {
+            throw new IllegalArgumentException("추첨을 진행할 수 없습니다. (상태가 DARWING이 아니거나 이미 처리됨)");
         }
 
         List<DrawEntrySummary.ParticipantWeight> candidates = drawEntrySummaryRepository.findWeights(drawId);
         if (candidates.isEmpty()) {
-            throw new IllegalArgumentException("응모자가 없어 추첨할 수 없습니다.");
+            return List.of();
+        }
+
+        // winnerCount는 Draw에서 읽어야 하나까 draw 조회 1번 필요
+        Draw draw = drawRepository.findByIdForUpdate(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
+
+        if (drawWinnerRepository.existsByDrawId(drawId)) {
+            throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
         }
 
         int winnerCount = draw.getWinnerCount();
@@ -190,35 +236,23 @@ public class DrawService {
 
         List<Long> winnerUserIds = pickWeightedWinners(candidates, k);
 
+        log.info("[Draw] drawId={} winners={}", drawId, winnerUserIds);
+
         List<DrawWinner> winners = new ArrayList<>();
-        for (int i = 0; i < winnerUserIds.size(); i++) {
+        for (Long userId : winnerUserIds) {
             winners.add(DrawWinner.builder()
                     .drawId(drawId)
-                    .userId(winnerUserIds.get(i))
+                    .userId(userId)
                     .build());
         }
         drawWinnerRepository.saveAll(winners);
-
-        /*
-        2) 임시 추첨 완료 상태면 중복 실행 방지
-        지금 CLOSED면 이미 끝난 걸로 간주
-        나중에는 draw_winner 존재 여부로 정확히 막기
-         */
-
-        /*
-        * 여기에 실제 당첨자 선정 + draw_winner 저장
-        * 응모자 목록 조회
-        * 랜덤 셔플
-        * winnerCount 만큼 저장*/
-
-        // 추첨 끝났다고 가정하고 CLOSED 로 전환
-        draw.close();
 
         return winners;
     }
 
     // 당첨자 추첨 로직
     private List<Long> pickWeightedWinners(List<DrawEntrySummary.ParticipantWeight> candidates, int k) {
+
         List<Scored> scored = new ArrayList<>(candidates.size());
 
         for (DrawEntrySummary.ParticipantWeight c : candidates) {
@@ -243,6 +277,7 @@ public class DrawService {
 
 
     private void validateDrawTime(LocalDateTime startAt, LocalDateTime endAt) {
+
         if (startAt == null || endAt == null) {
             throw new IllegalArgumentException("시작시간/종료시간 입력은 필수");
         }
@@ -253,6 +288,7 @@ public class DrawService {
 
 
     private void validateCounts(Integer ticketCostEntry, Integer winnerCount) {
+
         if (ticketCostEntry == null || ticketCostEntry < 1) {
             throw new IllegalArgumentException("필요 티켓 수 입력은 1장 이상");
         }
@@ -264,6 +300,7 @@ public class DrawService {
 
 
     private void validateImages(DrawCreateRequest req) {
+
         if (req.getProduct() == null || req.getProduct().getImages() == null || req.getProduct().getImages().isEmpty()) {
             throw new IllegalArgumentException("상품 이미지는 최소 1개 필요");
         }

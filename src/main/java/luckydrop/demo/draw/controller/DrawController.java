@@ -7,6 +7,7 @@ import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawCreateResponse;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
+import luckydrop.demo.draw.dto.response.DrawWinnerResponse;
 import luckydrop.demo.draw.service.DrawService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,9 +34,12 @@ public class DrawController {
     @PatchMapping("/{drawId}")
     public DrawDetailResponse updateDraw(
             @PathVariable Long drawId,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @RequestBody @Valid DrawUpdateRequest request
             ) {
-        return drawService.updateDraw(drawId, request);
+        Long requesterUserId = principal.getUser().getId();
+
+        return drawService.updateDraw(drawId, requesterUserId, request);
     }
 
     @PostMapping("/{drawId}/draw")
@@ -48,7 +52,14 @@ public class DrawController {
     public ResponseEntity<Void> deleteDraw(@PathVariable("id") Long id,
                                            @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        drawService.cancelDraw(id, principal.getUser().getId());
+        Long requesterUserId = principal.getUser().getId();
+
+        drawService.cancelDraw(id, requesterUserId);
         return ResponseEntity.noContent().build(); //204
+    }
+
+    @GetMapping("/{drawId}/winners")
+    public ResponseEntity<DrawWinnerResponse> getWinner(@PathVariable Long drawId) {
+        return ResponseEntity.ok(drawService.getWinner(drawId));
     }
 }
