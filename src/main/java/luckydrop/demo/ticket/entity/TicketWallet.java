@@ -26,5 +26,4 @@ public class TicketWallet extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private int balance = 0;
-
 }

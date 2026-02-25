@@ -9,32 +9,32 @@ spring:
     url: jdbc:mysql://localhost:3306/lucky_drop
     username: ${username}
     password: ${dbpassword}
-#  data:
-#    redis:
-#      host: localhost
-#      port: 6379
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
-#  mail:
-#    host: smtp.gmail.com
-#    port: 587
-#    username: ${MAIL_USERNAME}  # ??? ???
-#    password: ${MAIL_PASSWORD}  # ? ????
-#    properties:
-#      mail:
-#        smtp:
-#          auth: true
-#          starttls:
-#            enable: true
-#          ssl:
-#            enable: false
-#    service:
-#      sender:
-#        host: smtp.gmail.com
-#        port: 587
-#        username: ${MAIL_USERNAME}
-#        password: ${MAIL_PASSWORD}
-#        ssl:
-#          enable: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}  # ??? ???
+    password: ${MAIL_PASSWORD}  # ? ????
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            enable: false
+    service:
+      sender:
+        host: smtp.gmail.com
+        port: 587
+        username: ${MAIL_USERNAME}
+        password: ${MAIL_PASSWORD}
+        ssl:
+          enable: false
 
   # JPA & Hibernate ??
   jpa:
