@@ -6,8 +6,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import luckydrop.demo.common.BaseEntity;
+import luckydrop.demo.ticket.entity.TicketLedger;
 import luckydrop.demo.ticket.entity.TicketWallet;
 import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
+
+import java.util.List;
 
 @Entity
 @Builder
@@ -51,6 +54,10 @@ public class User extends BaseEntity {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private TicketWallet ticketWallet;
 
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "ticket_ledger")
+    private List<TicketLedger> ticketLedger;
+
     public ProfileUpdateReqDto.ProfileUpdateReqDtoBuilder toProfileUpdateReqDto() {
         return ProfileUpdateReqDto.builder()
                 .phone(this.phone)
@@ -62,5 +69,9 @@ public class User extends BaseEntity {
         this.phone = profileUpdateReqDto.getPhone();
         this.address = profileUpdateReqDto.getAddress();
         this.nickname = profileUpdateReqDto.getNickname();
+    }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 }

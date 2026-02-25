@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.common.auth.JwtTokenProvider;
+import luckydrop.demo.user.dto.request.ChangePasswordReqDto;
 import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
 import luckydrop.demo.user.dto.request.UserLoginReqDto;
 import luckydrop.demo.user.dto.request.UserSaveReqDto;
@@ -234,4 +235,48 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
+
+    // UserService에 추가
+    public void validateEmailExists(String email) {
+        if (!userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("가입되지 않은 이메일입니다.");
+        }
+    }
+
+    @Transactional
+    public void resetUserPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
+
+        // BCrypt 등으로 암호화 (기존 passwordEncoder 주입 필요)
+        String encodedPassword = passwordEncoder.encode(newPassword);
+
+        // 기존 updateProfile 패턴처럼 직접 업데이트
+        user.updatePassword(encodedPassword);
+
+        log.info("사용자 {}의 비밀번호 재설정 완료", user.getId());
+
+        // TODO: refreshToken 블랙리스트에 추가 (로그아웃 효과)
+        // refreshTokenService.invalidateAllByUserId(user.getId());
+    }
+
+    // UserService.changePassword()
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordReqDto dto) {
+        User user = userRepository.findById(userId).orElseThrow();
+
+        // 현재 비밀번호 검증
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        // 새 비밀번호 강도 체크 (옵션)
+        if (dto.getNewPassword().length() < 8) {
+            throw new IllegalArgumentException("새 비밀번호는 8자 이상이어야 합니다.");
+        }
+
+        user.updatePassword(passwordEncoder.encode(dto.getNewPassword()));
+    }
+
+
 }

@@ -33,7 +33,10 @@ public class Securityconfigs {
                 .httpBasic(AbstractHttpConfigurer::disable) // Http basic 비활성화 (토큰 기반 인증처리를 하기 때문에 자동적으로 켜지는 basic 비활성화)
                 // 특정 url 패턴에 대해서는 Authentication 객체 요구하지 않음. (인증처리 제외)
                 .authorizeHttpRequests(a -> a.requestMatchers("/api/user/create", "/api/user/login", "/api/user/logout",
-                        "/api/user/token/reissue" ,"/api/ticket/ledger/**", "/api/ticket/wallet/**", "/api/ticket/use", "/api/ticket/earn", "/api/ticket/adjust").permitAll().anyRequest().authenticated())
+                        "/api/user/token/reissue" ,"/api/ticket/ledger/**", "/api/ticket/wallet/**",
+                        "/api/ticket/use", "/api/ticket/earn", "/api/ticket/adjust",
+                        "/api/signup/email", "/api/signup/emailAuth",
+                        "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password").permitAll().anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //세션방식을 사용하지 않겠다 라는 의미
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
