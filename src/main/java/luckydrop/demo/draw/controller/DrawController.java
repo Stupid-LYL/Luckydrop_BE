@@ -7,6 +7,7 @@ import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawCreateResponse;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
+import luckydrop.demo.draw.dto.response.DrawWinnerResponse;
 import luckydrop.demo.draw.service.DrawService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,5 +56,10 @@ public class DrawController {
 
         drawService.cancelDraw(id, requesterUserId);
         return ResponseEntity.noContent().build(); //204
+    }
+
+    @GetMapping("/{drawId}/winners")
+    public ResponseEntity<DrawWinnerResponse> getWinner(@PathVariable Long drawId) {
+        return ResponseEntity.ok(drawService.getWinner(drawId));
     }
 }
