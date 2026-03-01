@@ -3,6 +3,7 @@ package luckydrop.demo.draw.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
 import luckydrop.demo.draw.dto.request.DrawCreateRequest;
 import luckydrop.demo.draw.dto.request.DrawUpdateRequest;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
@@ -38,6 +39,7 @@ public class DrawService {
     private final InventoryRepository inventoryRepository;
     private final InventoryImageRepository inventoryImageRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
+    private final DrawBookmarkService drawBookmarkService;
 
     @Transactional
     public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
@@ -90,7 +92,10 @@ public class DrawService {
             draw.markEndAtChanged();
         }
 
-        return DrawDetailResponse.from(draw, false);
+        boolean isBookmarked = drawBookmarkService.isBookmarked(requesterUserId, drawId);
+        long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
+
+        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount);
 
     }
 

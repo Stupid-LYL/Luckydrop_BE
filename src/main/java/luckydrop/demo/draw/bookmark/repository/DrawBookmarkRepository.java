@@ -1,6 +1,8 @@
 package luckydrop.demo.draw.bookmark.repository;
 
 import luckydrop.demo.draw.bookmark.entity.DrawBookmark;
+import luckydrop.demo.draw.bookmark.entity.DrawBookmarkId;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -8,40 +10,68 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
 
-public interface DrawBookmarkRepository extends JpaRepository<DrawBookmark, Long> {
+public interface DrawBookmarkRepository extends JpaRepository<DrawBookmark, DrawBookmarkId> {
 
     //단건 체크
-    boolean existsByUserIdAndDrawId(Long userId, Long drawId);
+    boolean existsByIdUserIdAndIdDrawId(Long userId, Long drawId);
 
     //찜 취소
-    long deleteByUserIdAndDrawId(Long userId, Long drawId);
+    long deleteByIdUserIdAndIdDrawId(Long userId, Long drawId);
+
+    long countByIdDrawId(Long drawId);
+
+    @Query("""
+        select b.id.drawId as drawId, count(b) as cnt
+        from DrawBookmark b
+        where b.id.drawId in :drawIds
+        group by b.id.drawId
+""")
+    List<DrawBookmarkCountView> countByDrawIds(@Param("drawIds") List<Long> drawIds);
+
 
     //내가 북마크한 드로우 목록
     @Query("""
-            select b.drawId
+            select b.id.drawId
             from DrawBookmark b
-            where b.userId = :userId
-                and b.drawId in (:drawIds)
+            where b.id.userId = :userId
+                and b.id.drawId in :drawIds
             """)
     List<Long> findBookmarkedDrawIds(@Param("userId") Long userId,
                                      @Param("drawIds") List<Long> drawIds);
 
 
-    //최신순 페이징
-    @Query("""
-            select b
-            from DrawBookmark b
-            where b.userId = :userId
-            order by b.createdAt desc
-            """)
-    List<DrawBookmark> findMyBookmarks(@Param("userId") Long userId, Pageable pageable);
-
-
-    @Query("""
-            select b.drawId
-            from DrawBookmark b
-            where b.userId = :userId
-            order by b.createdAt desc
-            """)
-    List<Long> findMyBookmarkedDrawIds(@Param("userId") Long userId, Pageable pageable);
+    @Query(
+            value = """
+            select
+                d.id as drawId,
+                d.title as title,
+                d.status as status,
+                d.start_at as startAt,
+                d.end_at as endAt,
+                
+                (select count(*) from draw_bookmark b2 where b2.draw_id = d.id) as bookmarkCount,
+                (select count(*) from draw_entry_summary s where s.draw_id = d.id) as participants,
+                
+                (
+                    select ii.image_url
+                    from inventory_image ii
+                    where ii.inventory_id = d.inventory_id
+                    order by ii.sort_order asc, ii.id asc
+                    limit 1
+                ) as thumbnailUrl,
+                
+                b.created_at as bookmarkedAt
+                from draw_bookmark b
+                join draw d on d.id = b.draw_id
+                where b.user_id = :userId
+                order by b.created_at desc
+                """,
+            countQuery = """
+                    select count(*)
+                    from draw_bookmark b
+                    where b.user_id = :userId
+                    """,
+            nativeQuery = true
+    )
+    Page<BookmarkedDrawSummaryView> findMyBookmarkedDraws(@Param("userId") Long userId, Pageable pageable);
 }

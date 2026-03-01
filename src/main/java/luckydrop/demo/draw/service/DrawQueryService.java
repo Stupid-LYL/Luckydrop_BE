@@ -33,10 +33,18 @@ public class DrawQueryService {
                 .map(Draw::getId)
                 .toList();
 
-        Set<Long> bookmarkIds = drawBookmarkService.findBookmarkedDrawIds(userId, drawIds);
+        Set<Long> bookmarkedIds = drawBookmarkService.findBookmarkedDrawIds(userId, drawIds);
 
-        return page.map(draw ->
-                DrawSummaryResponse.from(draw, bookmarkIds.contains(draw.getId())));
+        // ✅ drawId별 북마크 카운트 한 방에
+        var bookmarkCountMap = drawBookmarkService.findBookmarkCountMap(drawIds);
+
+        return page.map(draw -> {
+            Long drawId = draw.getId();
+            boolean isBookmarked = bookmarkedIds.contains(drawId);
+            long bookmarkCount = bookmarkCountMap.getOrDefault(drawId, 0L);
+
+            return DrawSummaryResponse.from(draw, isBookmarked, bookmarkCount);
+        });
     }
 
     // 단건 exist로 체크
@@ -45,7 +53,8 @@ public class DrawQueryService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 드로우입니다."));
 
         boolean isBookmarked = drawBookmarkService.isBookmarked(userId, drawId);
+        long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked);
+        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount);
     }
 }

@@ -3,14 +3,12 @@ package luckydrop.demo.draw.bookmark.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.bookmark.entity.DrawBookmark;
+import luckydrop.demo.draw.bookmark.repository.DrawBookmarkCountView;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import org.springframework.stereotype.Service;
 
-import org.springframework.data.domain.Pageable;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +25,7 @@ public class DrawBookmarkService {
         }
 
         //멱등성
-        if (drawBookmarkRepository.existsByUserIdAndDrawId(userId, drawId)) {
+        if (drawBookmarkRepository.existsByIdUserIdAndIdDrawId(userId, drawId)) {
             return;
         }
 
@@ -36,12 +34,12 @@ public class DrawBookmarkService {
 
     //찜 취소
     public void unBookmark(Long userId, Long drawId) {
-        drawBookmarkRepository.deleteByUserIdAndDrawId(userId, drawId);
+        drawBookmarkRepository.deleteByIdUserIdAndIdDrawId(userId, drawId);
     }
 
     //상세 조회시 단건 체크
     public boolean isBookmarked(Long userId, Long drawId) {
-        return drawBookmarkRepository.existsByUserIdAndDrawId(userId, drawId);
+        return drawBookmarkRepository.existsByIdUserIdAndIdDrawId(userId, drawId);
     }
 
     //드로우 목록 조회 N + 1 방지용
@@ -57,13 +55,20 @@ public class DrawBookmarkService {
         return new HashSet<>(bookmarkedIds);
     }
 
-    //내 북마크 조회
-    public List<DrawBookmark> findMyBookmarks(Long userId, Pageable pageable) {
-        return drawBookmarkRepository.findMyBookmarks(userId, pageable);
+    public Map<Long, Long> findBookmarkCountMap(List<Long> drawIds) {
+        if (drawIds.isEmpty()) return Map.of();
+
+        List<DrawBookmarkCountView> rows = drawBookmarkRepository.countByDrawIds(drawIds);
+        Map<Long, Long> map = new HashMap<>();
+        for (DrawBookmarkCountView r : rows) {
+            map.put(r.getDrawId(), r.getCnt() == null ? 0L : r.getCnt());
+        }
+
+        return map;
     }
 
-    //북마크 ID 뿌리는용
-    public List<Long> findMyBookmarkedDrawIds(Long userId, Pageable pageable) {
-        return drawBookmarkRepository.findMyBookmarkedDrawIds(userId, pageable);
+    // 상세 단건 count
+    public long getBookmarkCount(Long drawId) {
+        return drawBookmarkRepository.countByIdDrawId(drawId);
     }
 }

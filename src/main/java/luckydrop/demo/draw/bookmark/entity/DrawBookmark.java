@@ -12,9 +12,6 @@ import luckydrop.demo.common.BaseEntity;
 @Entity
 @Table(
         name = "draw_bookmark",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_draw_bookmark_user_draw", columnNames = {"user_id", "draw_id"})
-        },
         indexes = {
                 @Index(name = "idx_draw_bookmark_user_created", columnList = "user_id, created_at"),
                 @Index(name = "idx_draw_bookmark_draw", columnList = "draw_id")
@@ -25,20 +22,20 @@ import luckydrop.demo.common.BaseEntity;
 @Builder
 public class DrawBookmark extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
-
-    @Column(name = "draw_id", nullable = false)
-    private Long drawId;
+    @EmbeddedId
+    private DrawBookmarkId id;
 
     public static DrawBookmark of(Long userId, Long drawId) {
         return DrawBookmark.builder()
-                .userId(userId)
-                .drawId(drawId)
+                .id(new DrawBookmarkId(userId, drawId))
                 .build();
+    }
+
+    public Long getUserId() {
+        return id.getUserId();
+    }
+
+    public Long getDrawId() {
+        return id.getDrawId();
     }
 }

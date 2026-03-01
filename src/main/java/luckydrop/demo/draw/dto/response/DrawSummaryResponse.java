@@ -21,7 +21,10 @@ public class DrawSummaryResponse {
     private String brand;
     private String imageUrl;
 
-    public static DrawSummaryResponse from(Draw draw, boolean isBookmark) {
+    private long bookmarkCount;
+    private boolean isBookmarked;
+
+    public static DrawSummaryResponse from(Draw draw, boolean isBookmark, long bookmarkCount) {
         return DrawSummaryResponse.builder()
                 .drawId(draw.getId())
                 .title(draw.getTitle())
@@ -29,6 +32,7 @@ public class DrawSummaryResponse {
                 .startAt(draw.getStartAt())
                 .endAt(draw.getEndAt())
                 .isBookmark(isBookmark)
+                .bookmarkCount(bookmarkCount)
                 .productName(draw.getInventory().getName())
                 .brand(draw.getInventory().getBrand())
                 .imageUrl(
