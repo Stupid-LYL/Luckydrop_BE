@@ -15,17 +15,24 @@ public class DrawSummaryResponse {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
 
+    private boolean isBookmark;
+
     private String productName;
     private String brand;
     private String imageUrl;
 
-    public static DrawSummaryResponse from(Draw draw) {
+    private long bookmarkCount;
+    private boolean isBookmarked;
+
+    public static DrawSummaryResponse from(Draw draw, boolean isBookmark, long bookmarkCount) {
         return DrawSummaryResponse.builder()
                 .drawId(draw.getId())
                 .title(draw.getTitle())
                 .ticketCostEntry(draw.getTicketCostEntry())
                 .startAt(draw.getStartAt())
                 .endAt(draw.getEndAt())
+                .isBookmark(isBookmark)
+                .bookmarkCount(bookmarkCount)
                 .productName(draw.getInventory().getName())
                 .brand(draw.getInventory().getBrand())
                 .imageUrl(
