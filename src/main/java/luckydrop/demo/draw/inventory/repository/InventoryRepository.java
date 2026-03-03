@@ -1,4 +1,4 @@
-package luckydrop.demo.draw.inventory;
+package luckydrop.demo.draw.inventory.repository;
 
 import luckydrop.demo.draw.inventory.entity.Inventory;
 import org.springframework.data.jpa.repository.JpaRepository;
