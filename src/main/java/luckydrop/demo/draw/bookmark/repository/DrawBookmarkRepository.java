@@ -20,6 +20,7 @@ public interface DrawBookmarkRepository extends JpaRepository<DrawBookmark, Draw
 
     long countByIdDrawId(Long drawId);
 
+
     @Query("""
         select b.id.drawId as drawId, count(b) as cnt
         from DrawBookmark b
@@ -27,6 +28,14 @@ public interface DrawBookmarkRepository extends JpaRepository<DrawBookmark, Draw
         group by b.id.drawId
 """)
     List<DrawBookmarkCountView> countByDrawIds(@Param("drawIds") List<Long> drawIds);
+
+
+    @Query("""
+        select count(b)
+        from DrawBookmark b
+        where b.id.drawId = :drawId
+    """)
+    long countBookmarks(@Param("drawId") Long drawId);
 
 
     //내가 북마크한 드로우 목록

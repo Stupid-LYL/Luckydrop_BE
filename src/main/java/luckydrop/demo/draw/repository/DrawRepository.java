@@ -23,6 +23,14 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
 
     Optional<Draw> findByIdAndStatusNot(Long id, DrawStatus status);
 
+    @Query("""
+        select d
+        from Draw d
+        where d.id in :ids
+    """)
+    List<Draw> findAllByIdIn(@Param("ids") List<Long> ids);
+
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from Draw d where d.id = :id")
     Optional<Draw> findByIdForUpdate(@Param("id") Long id);
