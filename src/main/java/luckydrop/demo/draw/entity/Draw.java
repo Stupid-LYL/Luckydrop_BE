@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import luckydrop.demo.common.BaseEntity;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
 
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Draw {
+public class Draw extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

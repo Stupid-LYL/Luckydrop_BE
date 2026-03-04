@@ -11,6 +11,20 @@ import java.util.List;
 
 public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySummary, DrawEntrySummaryId> {
 
+    interface DrawCountRow {
+        Long getDrawId();
+        Long getCnt();
+    }
+
+    @Query("""
+        select s.drawId as drawId, count(s.userId) as cnt
+        from DrawEntrySummary s
+        where s.drawId in :drawIds
+        group by s.drawId
+""")
+    List<DrawCountRow> countParticipantsByDrawIds(@Param("drawIds") List<Long> drawIds);
+
+
     @Query("""
          select count(s)
          from DrawEntrySummary s
