@@ -29,19 +29,19 @@ public class DrawQueryService {
     private final DrawBookmarkService drawBookmarkService;
     private final DrawRepository drawRepository;
 
-    // ✅ 추가
+    //  추가
     private final DrawQueryIdRepository drawQueryIdRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
 
 
-    // ✅ 컨트롤러용 wrapper (page,size -> Pageable)
+    // 컨트롤러용 wrapper (page,size -> Pageable)
     public Page<DrawSummaryResponse> getDraws(Long userId, DrawTab tab, DrawSort sort, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return getDraws(userId, tab, sort, pageable);
     }
 
     /**
-     * ✅ 명세 기반 목록 조회 (탭/정렬/tie-break/participant/bookmark)
+     *  명세 기반 목록 조회 (탭/정렬/tie-break/participant/bookmark)
      */
     public Page<DrawSummaryResponse> getDraws(Long userId, DrawTab tab, DrawSort sortOrNull, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
@@ -133,16 +133,18 @@ public class DrawQueryService {
 
     private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sort) {
         if (sort != null) return sort;
-        return switch (tab) {
-            case UPCOMING -> DrawSort.LATEST;
-            case ONGOING -> DrawSort.STARTED_DESC;
-            case CLOSED -> DrawSort.ENDED_DESC;
-        };
+        return DrawSort.LATEST;
     }
 
     private Page<Long> findIdsByPolicy(DrawTab tab, DrawSort sort, LocalDateTime now, Pageable pageable) {
         return switch (tab) {
+            case ALL -> switch (sort) {
+                //  전체 기본정렬: createdAt DESC
+                case LATEST -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
+                default -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
+            };
             case UPCOMING -> switch (sort) {
+                case LATEST -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
                 case BOOKMARK -> drawQueryIdRepository.findUpcomingBookmarkIds(DrawStatus.DRAFT, now, pageable);
                 default -> drawQueryIdRepository.findUpcomingLatestIds(DrawStatus.DRAFT, now, pageable);
             };

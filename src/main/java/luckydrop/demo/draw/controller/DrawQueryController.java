@@ -24,7 +24,7 @@ public class DrawQueryController {
     @GetMapping
     public ResponseEntity<Page<DrawSummaryResponse>> getDraws(
             @AuthenticationPrincipal CustomUserPrincipal principal,
-            @RequestParam DrawTab tab,
+            @RequestParam(defaultValue = "ALL") DrawTab tab,
             @RequestParam(required = false) DrawSort sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size

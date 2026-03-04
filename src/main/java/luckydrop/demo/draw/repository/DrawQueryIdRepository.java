@@ -12,6 +12,16 @@ import java.time.LocalDateTime;
 
 public interface DrawQueryIdRepository extends JpaRepository<Draw, Long> {
 
+    //전체보기
+    @Query("""
+        select d.id
+        from Draw d
+        where d.status <> :excludedStatus
+        order by d.createdAt desc
+    """)
+    Page<Long> findAllLatestIds(@Param("excludedStatus") DrawStatus excludedStatus,
+                                Pageable pageable);
+
     // UPCOMING status = DRAFT AND startAt > now
     @Query("""
         select d.id
