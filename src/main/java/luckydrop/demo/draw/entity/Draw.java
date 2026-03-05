@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import luckydrop.demo.common.BaseEntity;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
 
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Draw {
+public class Draw extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -104,7 +105,12 @@ public class Draw {
 
     //드로우 취소
     public void cancel() {
-        status = DrawStatus.CANCELLED;
+        if (this.status == DrawStatus.CANCEL) return;
+
+        if (this.status == DrawStatus.DRAWING || this.status == DrawStatus.CLOSE) {
+            throw new IllegalStateException("해당 드로우는 삭제할 수 없습니다.");
+        }
+        this.status = DrawStatus.CANCEL;
     }
 
     public void changeDescription(String description) {

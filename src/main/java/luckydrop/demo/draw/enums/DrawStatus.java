@@ -5,5 +5,5 @@ public enum DrawStatus {
     ACTIVE,
     DRAWING,
     CLOSE,
-    CANCELLED
+    CANCEL
 }

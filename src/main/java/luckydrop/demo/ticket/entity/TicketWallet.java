@@ -16,15 +16,14 @@ import luckydrop.demo.user.entity.User;
 public class TicketWallet extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id;   // user_id와 같은 값 (PK이자 FK)
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId                    // User의 id를 이 엔티티의 PK로도 사용
     @JoinColumn(name = "user_id")
     private User user;
 
     @Column(nullable = false)
     @Builder.Default
     private int balance = 0;
-
 }

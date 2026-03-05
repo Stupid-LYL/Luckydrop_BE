@@ -2,6 +2,9 @@ package luckydrop.demo.draw.repository;
 
 import jakarta.persistence.LockModeType;
 import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.draw.enums.DrawStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -9,10 +12,24 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface DrawRepository extends JpaRepository<Draw, Long> {
+
     boolean existsByInventoryId(Long inventoryId); // inventory_id UNIQUE 체크용
+
+    Page<Draw> findAllByStatusNot(DrawStatus status, Pageable pageable);
+
+    Optional<Draw> findByIdAndStatusNot(Long id, DrawStatus status);
+
+    @Query("""
+        select d
+        from Draw d
+        where d.id in :ids
+    """)
+    List<Draw> findAllByIdIn(@Param("ids") List<Long> ids);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from Draw d where d.id = :id")
@@ -35,6 +52,23 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
             and d.endAt <= :now
     """)
     int updateActiveToDrawing(@Param("now") LocalDateTime now);
+
+    @Modifying
+    @Query("""
+        update Draw d
+        set d.status = 'CLOSE'
+        where d.id = :drawId
+            and d.status = 'DRAWING'
+    """)
+    int updateDrawingToClosed(@Param("drawId") Long drawId);
+
+    @Query("""
+    select d from Draw d
+    where d.status = :status
+        and d.endAt <= :now
+""")
+    List<Draw> findReadyForDrawing(@Param("status") DrawStatus status,
+                                   @Param("now") LocalDateTime now);
 }
 
 

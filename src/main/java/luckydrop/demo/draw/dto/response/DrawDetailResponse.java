@@ -19,13 +19,17 @@ public class DrawDetailResponse {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
 
+    private boolean isBookmarked;
+    private long participantCount;
+    private long bookmarkCount;
+
     private String productName;
     private String brand;
     private String productDescription;
     private Integer price;
     private List<String> images;
 
-    public static DrawDetailResponse from(Draw draw) {
+    public static DrawDetailResponse from(Draw draw, boolean isBookmarked, long bookmarkCount, long participantCount) {
         return DrawDetailResponse.builder()
                 .drawId(draw.getId())
                 .title(draw.getTitle())
@@ -34,6 +38,9 @@ public class DrawDetailResponse {
                 .winnerCount(draw.getWinnerCount())
                 .startAt(draw.getStartAt())
                 .endAt(draw.getEndAt())
+                .isBookmarked(isBookmarked)
+                .bookmarkCount(bookmarkCount)
+                .participantCount(participantCount)
                 .productName(draw.getInventory().getName())
                 .brand(draw.getInventory().getBrand())
                 .productDescription(draw.getInventory().getDescription())

@@ -9,13 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.common.auth.JwtTokenProvider;
 import luckydrop.demo.common.member.CustomUserPrincipal;
 import luckydrop.demo.common.util.CookieUtil;
-import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
-import luckydrop.demo.user.dto.request.UserLoginReqDto;
-import luckydrop.demo.user.dto.request.UserSaveReqDto;
-import luckydrop.demo.user.dto.response.UserListResDto;
-import luckydrop.demo.user.dto.response.UserProfileResDto;
-import luckydrop.demo.user.dto.response.UserStatusDto;
-import luckydrop.demo.user.dto.response.UserInfoResDto;
+import luckydrop.demo.email.service.EmailService;
+import luckydrop.demo.user.dto.request.*;
+import luckydrop.demo.user.dto.response.*;
 import luckydrop.demo.user.entity.User;
 import luckydrop.demo.user.service.UserService;
 import org.springframework.context.annotation.Profile;
@@ -35,6 +31,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final EmailService emailService;
     private final JwtTokenProvider jwtTokenProvider;
     private final CookieUtil cookieUtil;
 
@@ -115,4 +112,49 @@ public class UserController {
 
         return new ResponseEntity<>(updatedUserInfo, HttpStatus.OK);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDetailResDto> getUserDetail(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        Long userId = principal.getUser().getId(); // JWT에서 userId 추출
+        UserDetailResDto userDetail = userService.getUserDetail(userId);
+
+        return new ResponseEntity<>(userDetail, HttpStatus.OK);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordReqDto reqDto) {
+        userService.validateEmailExists(reqDto.getEmail());
+        emailService.sendPasswordResetEmail(reqDto.getEmail());
+        return ResponseEntity.ok("인증 코드가 이메일로 발송되었습니다.");
+    }
+
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<Map<String, Boolean>> verifyResetCode(@RequestBody VerifyResetCodeReqDto reqDto) {
+        boolean isValid = emailService.checkResetAuthNum(reqDto.getEmail(), reqDto.getAuthNum());
+        Map<String, Boolean> response = Map.of("valid", isValid);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordReqDto reqDto) {
+//        if (!emailService.verifyResetCode(reqDto.getEmail(), reqDto.getAuthNum())) {
+//            throw new IllegalArgumentException("인증 코드가 만료되었거나 일치하지 않습니다.");
+//        }
+        userService.resetUserPassword(reqDto.getEmail(), reqDto.getNewPassword());
+        emailService.deleteResetCode(reqDto.getEmail());  // 최종 삭제
+        return ResponseEntity.ok("비밀번호가 성공적으로 재설정되었습니다.");
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<String> changePassword(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @Valid @RequestBody ChangePasswordReqDto reqDto) {
+
+        userService.changePassword(principal.getUser().getId(), reqDto);
+        return ResponseEntity.ok("비밀번호가 변경되었습니다.");
+    }
+
+
 }
