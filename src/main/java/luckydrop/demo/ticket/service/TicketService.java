@@ -224,4 +224,16 @@ public class TicketService {
                 .build();
     }
 
+    @Transactional
+    public void refundTickets(Long userId, Long amount) {
+        if (userId == null) throw new IllegalArgumentException("userId is null");
+        if (amount == null || amount <= 0) return;
+
+        int delta = Math.toIntExact(amount); //overflow 안전 ??
+
+        TicketWallet wallet = ticketWalletRepository.findByUserIdWithLock(userId)
+                .orElseThrow(() -> new IllegalArgumentException("티켓 지갑이 없습니다. userId=" + userId));
+
+        wallet.addBalanceByRefund(delta);
+    }
 }

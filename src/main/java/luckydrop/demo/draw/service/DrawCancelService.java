@@ -1,0 +1,101 @@
+package luckydrop.demo.draw.service;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.draw.entity.DrawRefundJob;
+import luckydrop.demo.draw.enums.DrawStatus;
+import luckydrop.demo.draw.repository.DrawRefundJobRepository;
+import luckydrop.demo.draw.repository.DrawRepository;
+import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
+import luckydrop.demo.ticket.entity.TicketLedger;
+import luckydrop.demo.ticket.entity.TicketLedgerFactory;
+import luckydrop.demo.ticket.repository.TicketLedgerRepository;
+import luckydrop.demo.ticket.service.TicketService;
+import luckydrop.demo.user.entity.User;
+import luckydrop.demo.user.repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class DrawCancelService {
+
+    private final DrawRepository drawRepository;
+    private final DrawRefundJobRepository drawRefundJobRepository;
+    private final DrawEntrySummaryRepository drawEntrySummaryRepository;
+
+    private final TicketService ticketService;
+    private final TicketLedgerRepository ticketLedgerRepository;
+    private UserRepository userRepository;
+
+    @Transactional
+    public void cancelByHost(Long drawId, Long requesterUserId) {
+
+        Draw draw = drawRepository.findByIdForUpdate(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다. id=" + drawId));
+
+        // host 만 삭제 가능
+        if (draw.getUserId() == null || !draw.getUserId().equals(requesterUserId)) {
+            throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
+        }
+
+        if (draw.getStatus() != DrawStatus.DRAFT) {
+            throw new IllegalArgumentException("시작 시간 전의 드로우만 취소할 수 있습니다.");
+        }
+
+        draw.cancel();
+    }
+
+    @Transactional
+    public void cancelByAdmin(Long drawId, String reasonCode, String reasonDetail) {
+        Draw draw = drawRepository.findByIdForUpdate(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
+
+        if (draw.getStatus() == DrawStatus.CANCEL) {
+            throw new IllegalArgumentException("이미 취소된 드로우입니다.");
+        }
+        if (draw.getStatus() == DrawStatus.CLOSE) {
+            throw new IllegalArgumentException("종료된 드로우는 취소할 수 없습니다.");
+        }
+        if (draw.getStatus() == DrawStatus.DRAWING) {
+            throw new IllegalArgumentException("추첨 중인 드로우는 취소할 수 없습니다.");
+        }
+
+        // 드로우 취소 (멱등)
+        if (draw.getStatus() != DrawStatus.CANCEL) {
+            draw.cancel();
+        }
+
+        DrawRefundJob job = drawRefundJobRepository.findByIdForUpdate(drawId)
+                .orElseGet(() -> drawRefundJobRepository.save(
+                        DrawRefundJob.create(draw, reasonCode, reasonDetail)
+                ));
+
+        if (job.isRefunded()) {
+            return;
+        }
+
+        var targets = drawEntrySummaryRepository.findRefundTargets(drawId);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (var t : targets) {
+            Long userId = t.getUserId();
+            Long amount = t.getEntryCount();
+
+            if (amount== null || amount <= 0) continue;
+
+            ticketService.refundTickets(userId, amount);
+
+            User userRef = userRepository.getReferenceById(userId);
+            int amt = Math.toIntExact(amount);
+            TicketLedger ledger = TicketLedgerFactory.refundByDrawForceCancel(userRef, drawId, amt, reasonCode);
+            ticketLedgerRepository.save(ledger);
+        }
+
+        job.markRefunded(now);
+    }
+}

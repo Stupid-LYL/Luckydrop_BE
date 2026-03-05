@@ -163,23 +163,7 @@ public class DrawService {
         return draw.getId();
     }
 
-    @Transactional
-    public void cancelDraw(Long drawId, Long requesterUserId) {
 
-        Draw draw = drawRepository.findByIdForUpdate(drawId)
-                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다. id=" + drawId));
-
-        // host만 삭제 가능
-        if (draw.getUserId() == null || !draw.getUserId().equals(requesterUserId)) {
-            throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
-        }
-
-        if (draw.getStatus() != DrawStatus.DRAFT) {
-            throw new IllegalArgumentException("시작 시간 전의 드로우만 취소할 수 있습니다.");
-        }
-
-        draw.cancel();
-    }
 
     public List<MyWinResponse> getMyWins(Long userId) {
         return drawWinnerRepository.findByUserId(userId).stream()

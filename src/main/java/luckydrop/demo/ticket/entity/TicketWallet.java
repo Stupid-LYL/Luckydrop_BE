@@ -26,4 +26,9 @@ public class TicketWallet extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private int balance = 0;
+
+    public void addBalanceByRefund(int amount) {
+        if (amount <= 0) throw new IllegalArgumentException("amount must be positive");
+        this.balance += amount;
+    }
 }

@@ -32,8 +32,12 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
 
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select d from Draw d where d.id = :id")
-    Optional<Draw> findByIdForUpdate(@Param("id") Long id);
+    @Query("""
+        select d
+        from Draw d
+        where d.id = :drawId
+    """)
+    Optional<Draw> findByIdForUpdate(@Param("drawId") Long drawId);
 
     @Modifying
     @Query("""

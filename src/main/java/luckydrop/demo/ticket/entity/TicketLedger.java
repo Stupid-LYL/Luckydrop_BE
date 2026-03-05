@@ -38,7 +38,7 @@ public class TicketLedger extends BaseEntity {
     @Column(name = "ref_id", nullable = true)
     private String refId;
 
-    @Column(name = "idempotency_key",nullable = false)
+    @Column(name = "idempotency_key",nullable = false, unique = true)
     private String idempotencyKey;
 
 }
