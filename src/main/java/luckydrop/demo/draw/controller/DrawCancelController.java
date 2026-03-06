@@ -34,7 +34,7 @@ public class DrawCancelController {
             @RequestParam(required = false, defaultValue = "") String reasonDetail
     ) {
 
-        drawCancelService.cancelByAdmin(drawId);
+        drawCancelService.cancelByAdmin(drawId, reasonCode, reasonDetail);
 
         return ResponseEntity.noContent().build();
     }
