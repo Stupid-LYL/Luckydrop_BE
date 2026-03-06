@@ -1,6 +1,6 @@
 package luckydrop.demo.draw.service;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.entity.DrawRefundJob;

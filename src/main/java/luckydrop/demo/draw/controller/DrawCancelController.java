@@ -6,10 +6,10 @@ import luckydrop.demo.draw.service.DrawCancelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-@Service
+@Controller
 @RequiredArgsConstructor
 @RequestMapping("/api")
 public class DrawCancelController {

@@ -1,6 +1,5 @@
 package luckydrop.demo.draw.service;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
@@ -23,6 +22,7 @@ import luckydrop.demo.draw.repository.DrawWinnerRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

@@ -22,8 +22,6 @@ public class DrawEntrySummary {
     @Column(name = "entry_count", nullable = false)
     private Long entryCount;
 
-    //private LocalDateTime updatedAt
-
     // 임시 메서드
     public static DrawEntrySummary create(Long drawId, Long userId) {
         DrawEntrySummary summary = new DrawEntrySummary();
