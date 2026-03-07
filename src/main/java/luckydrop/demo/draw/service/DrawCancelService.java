@@ -29,7 +29,7 @@ public class DrawCancelService {
 
     private final TicketService ticketService;
     private final TicketLedgerRepository ticketLedgerRepository;
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public void cancelByHost(Long drawId, Long requesterUserId) {
@@ -64,12 +64,9 @@ public class DrawCancelService {
             throw new IllegalArgumentException("추첨 중인 드로우는 취소할 수 없습니다.");
         }
 
-        // 드로우 취소 (멱등)
-        if (draw.getStatus() != DrawStatus.CANCEL) {
-            draw.cancel();
-        }
+        draw.cancel();
 
-        DrawRefundJob job = drawRefundJobRepository.findByIdForUpdate(drawId)
+        DrawRefundJob job = drawRefundJobRepository.findByDrawIdForUpdate(drawId)
                 .orElseGet(() -> drawRefundJobRepository.save(
                         DrawRefundJob.create(draw, reasonCode, reasonDetail)
                 ));
@@ -79,7 +76,6 @@ public class DrawCancelService {
         }
 
         var targets = drawEntrySummaryRepository.findRefundTargets(drawId);
-
         LocalDateTime now = LocalDateTime.now();
 
         for (var t : targets) {

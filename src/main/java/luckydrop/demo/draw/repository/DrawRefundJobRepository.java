@@ -12,6 +12,6 @@ import java.util.Optional;
 public interface DrawRefundJobRepository extends JpaRepository<DrawRefundJob, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select j from DrawRefundJob j where j.id = :drawId")
-    Optional<DrawRefundJob> findByIdForUpdate(@Param("drawId") Long drawId);
+    @Query("select j from DrawRefundJob j where j.draw.id = :drawId")
+    Optional<DrawRefundJob> findByDrawIdForUpdate(@Param("drawId") Long drawId);
 }

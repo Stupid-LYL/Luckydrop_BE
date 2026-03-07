@@ -7,7 +7,12 @@ import luckydrop.demo.common.BaseEntity;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "draw_refund_job")
+@Table(
+        name = "draw_refund_job",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_draw_refund_job_draw", columnNames = "draw_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -15,12 +20,11 @@ import java.time.LocalDateTime;
 public class DrawRefundJob extends BaseEntity {
 
     @Id
-    @Column(name = "draw_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "draw_id")
+    @JoinColumn(name = "draw_id", nullable = false)
     private Draw draw;
 
     @Column(name = "cancel_reason_code", length = 50)
@@ -34,7 +38,6 @@ public class DrawRefundJob extends BaseEntity {
 
     public static DrawRefundJob create(Draw draw, String code, String detail) {
         return DrawRefundJob.builder()
-                .id(draw.getId())
                 .draw(draw)
                 .cancelReasonCode(code)
                 .cancelReasonDetail(detail)

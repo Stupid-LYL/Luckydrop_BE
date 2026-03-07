@@ -27,7 +27,7 @@ public class DrawCancelController {
     }
 
     @PostMapping("/admin/draws/{id}/force-cancel")
-    @PreAuthorize("hasRole('ADMIN')")
+    // @PreAuthorize("hasRole('ADMIN')") //추후 ADMIN ROLE 생길 경우에 사용
     public ResponseEntity<Void> forceCancel(
             @PathVariable("id") Long drawId,
             @RequestParam(required = false, defaultValue = "HOST_REQUEST") String reasonCode,
