@@ -89,7 +89,7 @@ public class DrawQueryService {
     }
 
 
-    public DrawDetailResponse getDrawDetail(Long userId, Long drawId) {
+    public DrawDetailResponse getDrawDetail(Long drawId, Long userId) {
         Draw draw = drawRepository.findByIdAndStatusNot(drawId, DrawStatus.CANCEL)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 드로우입니다."));
 

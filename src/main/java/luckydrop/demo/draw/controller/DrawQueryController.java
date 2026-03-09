@@ -34,11 +34,11 @@ public class DrawQueryController {
 
     @GetMapping("/{id}")
     public ResponseEntity<DrawDetailResponse> getDrawDetail(
-            @AuthenticationPrincipal CustomUserPrincipal principal,
-            @PathVariable Long id
+            @PathVariable("id") Long drawId,
+            @AuthenticationPrincipal CustomUserPrincipal principal
     ) {
         Long userId = (principal == null) ? null : principal.getUser().getId();
-        return ResponseEntity.ok(drawQueryService.getDrawDetail(id, userId));
+        return ResponseEntity.ok(drawQueryService.getDrawDetail(drawId, userId));
     }
 
     @GetMapping("/hot")
