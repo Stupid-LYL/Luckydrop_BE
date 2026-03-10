@@ -44,6 +44,9 @@ public class User extends BaseEntity {
     @Column(nullable = true)
     private String invitationCode;
 
+    @Column(nullable = true)
+    private String referredByCode;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private Role role = Role.USER; // 기본적으로 입력하지 않을 시, user로 들어감.

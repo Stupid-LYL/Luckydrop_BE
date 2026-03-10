@@ -19,7 +19,7 @@ public class TicketLedgerFactory {
                 .amount(amount)
                 .reason(reasonCode != null ? reasonCode : "DRAW_CANCEL REFUND")
                 .refType("DRAW")
-                .refId(String.valueOf(drawId))
+                .refId(drawId)
                 .idempotencyKey(idempotencyKey)
                 .build();
     }

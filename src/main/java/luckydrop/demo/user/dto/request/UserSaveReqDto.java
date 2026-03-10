@@ -26,4 +26,7 @@ public class UserSaveReqDto {
 
     @Column(nullable = true)
     private String address;
+
+    @Column(nullable = true)
+    private String referredByCode;
 }
