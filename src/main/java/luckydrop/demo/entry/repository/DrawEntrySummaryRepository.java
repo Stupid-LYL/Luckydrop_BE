@@ -16,6 +16,19 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
         Long getCnt();
     }
 
+    interface RefundTarget {
+        Long getUserId();
+        long getEntryCount(); // 이미 사용한 티켓 수
+    }
+
+    @Query("""
+        select s.userId as userId, s.entryCount as entryCount
+        from DrawEntrySummary s
+        where s.drawId = :drawId
+    """)
+    List<RefundTarget> findRefundTargets(@Param("drawId") Long drawId);
+
+
     @Query("""
         select s.drawId as drawId, count(s.userId) as cnt
         from DrawEntrySummary s

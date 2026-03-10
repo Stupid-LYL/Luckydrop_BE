@@ -3,6 +3,7 @@ package luckydrop.demo.draw.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.draw.enums.DrawStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ public class DrawDetailResponse {
     private Integer winnerCount;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
+    private DrawStatus status;
 
     private boolean isBookmarked;
     private long participantCount;
@@ -38,6 +40,7 @@ public class DrawDetailResponse {
                 .winnerCount(draw.getWinnerCount())
                 .startAt(draw.getStartAt())
                 .endAt(draw.getEndAt())
+                .status(draw.getStatus())
                 .isBookmarked(isBookmarked)
                 .bookmarkCount(bookmarkCount)
                 .participantCount(participantCount)

@@ -3,7 +3,7 @@ package luckydrop.demo.draw.service;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
-import luckydrop.demo.draw.dto.response.DrawSummaryResponse;
+import luckydrop.demo.draw.dto.response.DrawCardResponse;
 import luckydrop.demo.draw.dto.response.HotBannerResponse;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.enums.DrawSort;
@@ -35,7 +35,7 @@ public class DrawQueryService {
 
 
     // 컨트롤러용 wrapper (page,size -> Pageable)
-    public Page<DrawSummaryResponse> getDraws(Long userId, DrawTab tab, DrawSort sort, int page, int size) {
+    public Page<DrawCardResponse> getDraws(Long userId, DrawTab tab, DrawSort sort, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return getDraws(userId, tab, sort, pageable);
     }
@@ -43,7 +43,7 @@ public class DrawQueryService {
     /**
      *  명세 기반 목록 조회 (탭/정렬/tie-break/participant/bookmark)
      */
-    public Page<DrawSummaryResponse> getDraws(Long userId, DrawTab tab, DrawSort sortOrNull, Pageable pageable) {
+    public Page<DrawCardResponse> getDraws(Long userId, DrawTab tab, DrawSort sortOrNull, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
 
         DrawSort sort = resolveDefaultSort(tab, sortOrNull);
@@ -75,13 +75,13 @@ public class DrawQueryService {
                         DrawEntrySummaryRepository.DrawCountRow::getCnt
                 ));
 
-        List<DrawSummaryResponse> content = orderedDraws.stream()
+        List<DrawCardResponse> content = orderedDraws.stream()
                 .map(draw -> {
                     Long drawId = draw.getId();
                     boolean isBookmarked = bookmarkedIds.contains(drawId);
                     long bookmarkCount = bookmarkCountMap.getOrDefault(drawId, 0L);
                     long participantCount = participantCountMap.getOrDefault(drawId, 0L);
-                    return DrawSummaryResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
+                    return DrawCardResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
                 })
                 .toList();
 
@@ -89,7 +89,7 @@ public class DrawQueryService {
     }
 
 
-    public DrawDetailResponse getDrawDetail(Long userId, Long drawId) {
+    public DrawDetailResponse getDrawDetail(Long drawId, Long userId) {
         Draw draw = drawRepository.findByIdAndStatusNot(drawId, DrawStatus.CANCEL)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 드로우입니다."));
 
