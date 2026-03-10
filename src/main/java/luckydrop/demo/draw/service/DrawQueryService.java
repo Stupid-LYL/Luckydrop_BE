@@ -1,6 +1,7 @@
 package luckydrop.demo.draw.service;
 
 import lombok.RequiredArgsConstructor;
+import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
 import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
 import luckydrop.demo.draw.dto.response.DrawCardResponse;
@@ -9,6 +10,8 @@ import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.enums.DrawSort;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.enums.DrawTab;
+import luckydrop.demo.draw.inventory.entity.InventoryImage;
+import luckydrop.demo.draw.inventory.repository.InventoryImageRepository;
 import luckydrop.demo.draw.repository.DrawQueryIdRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
@@ -29,7 +32,8 @@ public class DrawQueryService {
     private final DrawBookmarkService drawBookmarkService;
     private final DrawRepository drawRepository;
 
-    //  추가
+    private final DrawBookmarkRepository drawBookmarkRepository;
+    private final InventoryImageRepository inventoryImageRepository;
     private final DrawQueryIdRepository drawQueryIdRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
 
@@ -75,6 +79,12 @@ public class DrawQueryService {
                         DrawEntrySummaryRepository.DrawCountRow::getCnt
                 ));
 
+        for (Draw draw : draws) {
+            System.out.println("drawId = " + draw.getId());
+            System.out.println("inventoryId = " + draw.getInventory().getId());
+            System.out.println("images size = " + draw.getInventory().getImages().size());
+        }
+
         List<DrawCardResponse> content = orderedDraws.stream()
                 .map(draw -> {
                     Long drawId = draw.getId();
@@ -101,34 +111,81 @@ public class DrawQueryService {
         return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
     }
 
-    /**
-     * HOT 배너
-     */
-    public HotBannerResponse getHotBanner() {
+
+    public HotBannerResponse getHotBanner(Long userId) {
+
         LocalDateTime now = LocalDateTime.now();
 
-        // 1순위
+        Long drawId = null;
+        String reason = "EMPTY";
+
+        // 1순위 인기 진행중
         Page<Long> p1 = drawQueryIdRepository.findHot1PopularOngoingIds(
                 DrawStatus.ACTIVE, DrawStatus.DRAWING, now, PageRequest.of(0, 1));
+
         if (!p1.isEmpty()) {
-            return HotBannerResponse.builder().drawId(p1.getContent().get(0)).reason("POPULAR").build();
+            drawId = p1.getContent().get(0);
+            reason = "POPULAR";
         }
 
-        // 2순위
-        Page<Long> p2 = drawQueryIdRepository.findHot2UpcomingBookmarkIds(
-                DrawStatus.DRAFT, now, PageRequest.of(0, 1));
-        if (!p2.isEmpty()) {
-            return HotBannerResponse.builder().drawId(p2.getContent().get(0)).reason("UPCOMING_BOOKMARK").build();
+        // 2순위 오픈 예정 북마크
+        if (drawId == null) {
+            Page<Long> p2 = drawQueryIdRepository.findHot2UpcomingBookmarkIds(
+                    DrawStatus.DRAFT, now, PageRequest.of(0, 1));
+
+            if (!p2.isEmpty()) {
+                drawId = p2.getContent().get(0);
+                reason = "UPCOMING_BOOKMARK";
+            }
         }
 
-        // 3순위
-        Page<Long> p3 = drawQueryIdRepository.findHot3RecentStartedIds(
-                DrawStatus.ACTIVE, DrawStatus.DRAWING, now, PageRequest.of(0, 1));
-        if (!p3.isEmpty()) {
-            return HotBannerResponse.builder().drawId(p3.getContent().get(0)).reason("RECENT_STARTED").build();
+        // 3순위 최근 시작
+        if (drawId == null) {
+            Page<Long> p3 = drawQueryIdRepository.findHot3RecentStartedIds(
+                    DrawStatus.ACTIVE, DrawStatus.DRAWING, now, PageRequest.of(0, 1));
+
+            if (!p3.isEmpty()) {
+                drawId = p3.getContent().get(0);
+                reason = "RECENT_STARTED";
+            }
         }
 
-        return HotBannerResponse.builder().drawId(null).reason("EMPTY").build();
+        if (drawId == null) {
+            return HotBannerResponse.builder()
+                    .reason("EMPTY")
+                    .build();
+        }
+
+        // 실제 Draw 조회
+        Draw draw = drawRepository.findById(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("draw not found"));
+
+        // 이미지 조회
+        List<String> images = inventoryImageRepository
+                .findByInventoryIdOrderBySortOrderAsc(draw.getInventory().getId())
+                .stream()
+                .map(InventoryImage::getImageUrl)
+                .toList();
+
+        // 북마크 여부
+        boolean isBookmarked = drawBookmarkRepository
+                .existsByIdUserIdAndIdDrawId(userId, drawId);
+
+        return HotBannerResponse.builder()
+                .drawId(drawId)
+                .reason(reason)
+
+                .title(draw.getTitle())
+                .productName(draw.getInventory().getName())
+
+                .images(images)
+                .isBookmarked(isBookmarked)
+
+                .ticketCostEntry(draw.getTicketCostEntry())
+                .startAt(draw.getStartAt())
+                .endAt(draw.getEndAt())
+
+                .build();
     }
 
     private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sort) {

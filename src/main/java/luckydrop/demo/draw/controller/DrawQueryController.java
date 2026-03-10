@@ -42,7 +42,10 @@ public class DrawQueryController {
     }
 
     @GetMapping("/hot")
-    public ResponseEntity<HotBannerResponse> getHotBanner() {
-        return ResponseEntity.ok(drawQueryService.getHotBanner());
+    public ResponseEntity<HotBannerResponse> getHotBanner(
+            @AuthenticationPrincipal CustomUserPrincipal principal
+    ) {
+        Long userId = principal.getUser().getId();
+        return ResponseEntity.ok(drawQueryService.getHotBanner(userId));
     }
 }

@@ -130,8 +130,6 @@ public interface DrawQueryIdRepository extends JpaRepository<Draw, Long> {
                                       Pageable pageable);
 
 
-    // 2) HOT 배너 전용 (명세 그대로)
-
     // 1순위: participantCount desc, tie endAt asc -> createdAt desc (ONGOING 대상으로 의미있음)
     @Query("""
         select d.id
