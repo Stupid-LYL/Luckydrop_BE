@@ -3,44 +3,67 @@ package luckydrop.demo.mission.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import luckydrop.demo.common.BaseEntity;
-import luckydrop.demo.mission.enums.UserMissionStatus;
+
+import java.time.LocalDateTime;
 
 @Entity
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-@Builder
 @Table(
         name = "user_mission",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_user_mission_unique",
+                        name = "uq_user_mission_period",
                         columnNames = {"user_id", "mission_id", "period_key"}
                 )
         }
 )
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Builder
 public class UserMission extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // user 엔티티를 직접 물고 가기보단, 지금 단계에서는 userId만 들고 가는 게 단순함
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Column(name = "mission_id", nullable = false)
     private Long missionId;
 
-    // yyyyMMdd 형태 추천
-    @Column(name = "period_key", nullable = false, length = 8)
-    private String periodKey; // "20260224" 같은 문자열 날짜 키
+    @Column(name = "period_key", length = 20, nullable = false)
+    private String periodKey;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserMissionStatus status;
+    @Column(name = "progress_count", nullable = false)
+    private int progressCount;
 
-    // 연속 출석용(출첵 미션에만 의미 있음)
-    @Column(nullable = false)
-    private int streak; // 오늘 출첵 처리 후의 연속 출석 일수
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "rewarded_at")
+    private LocalDateTime rewardedAt;
+
+    // ---- domain update methods (dirty checking용) ----
+
+    public void setPeriodKey(String periodKey) {
+        this.periodKey = periodKey; //nullable = false라서, 예시로 넣었던 periodKey(null) 생성 코드는 DB에서 터짐
+    }
+
+    public void setProgressCount(int progressCount) {
+        this.progressCount = progressCount;
+    }
+
+    public void markCompletedNow() {
+        this.completedAt = LocalDateTime.now();
+    }
+
+    public void markRewardedNow() {
+        this.rewardedAt = LocalDateTime.now();
+    }
+
+    public void clearRewardedAt() {
+        this.rewardedAt = null;
+    }
+
 }

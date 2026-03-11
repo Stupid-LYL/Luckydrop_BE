@@ -1,32 +1,35 @@
 package luckydrop.demo.mission.service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.mission.dto.response.AttendanceCheckInResponse;
 import luckydrop.demo.mission.entity.Mission;
 import luckydrop.demo.mission.entity.UserMission;
-import luckydrop.demo.mission.enums.MissionType;
-import luckydrop.demo.mission.enums.UserMissionStatus;
 import luckydrop.demo.mission.repository.MissionRepository;
 import luckydrop.demo.mission.repository.UserMissionRepository;
 import luckydrop.demo.ticket.dto.request.TicketEarnReqDto;
-import luckydrop.demo.ticket.dto.response.TicketTransactionResDto;
 import luckydrop.demo.ticket.service.TicketService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class AttendanceService {
 
-    private static final DateTimeFormatter PERIOD_FORMAT = DateTimeFormatter.BASIC_ISO_DATE; // yyyyMMdd
-    private static final int BONUS_7_DAYS = 7;
-    private static final int BONUS_30_DAYS = 30;
+    private static final DateTimeFormatter D = DateTimeFormatter.BASIC_ISO_DATE; // yyyyMMdd
+
+    private static final String CODE_STATE = "ATTENDANCE_STATE";
+    private static final String CODE_DAILY = "ATTENDANCE_DAILY";
+
+    private static final Map<Integer, String> BONUS_CODES = Map.of(
+            7, "ATTENDANCE_BONUS_7",
+            14, "ATTENDANCE_BONUS_14",
+            21, "ATTENDANCE_BONUS_21",
+            30, "ATTENDANCE_BONUS_30"
+    );
 
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
@@ -34,112 +37,117 @@ public class AttendanceService {
 
     @Transactional
     public AttendanceCheckInResponse checkIn(Long userId) {
-        String periodKey = LocalDate.now().format(PERIOD_FORMAT);
+        LocalDate today = LocalDate.now();
+        String todayKey = today.format(D);
+        String yesterdayKey = today.minusDays(1).format(D);
 
-        Mission attendanceMission = missionRepository.findByTypeAndActiveTrue(MissionType.ATTENDANCE)
-                .orElseThrow(() -> new IllegalStateException("ATTENDANCE mission not found or inactive"));
+        Mission stateMission = missionRepository.findByCode(CODE_STATE)
+                .orElseThrow(() -> new IllegalStateException("Mission not found: " + CODE_STATE));
 
-        Long missionId = attendanceMission.getId();
+        Mission dailyMission = missionRepository.findByCode(CODE_DAILY)
+                .orElseThrow(() -> new IllegalStateException("Mission not found: " + CODE_DAILY));
 
-        // 1) 오늘 이미 출첵했는지 (유니크 제약이 있지만, 메시지 친절하게 주려고 사전 체크)
-        if (userMissionRepository.existsByUserIdAndMissionIdAndPeriodKey(userId, missionId, periodKey)) {
-            Optional<UserMission> today = userMissionRepository.findByUserIdAndMissionIdAndPeriodKey(userId, missionId, periodKey);
+        UserMission state = userMissionRepository.findByUserIdAndMissionIdWithLock(userId, stateMission.getId())
+                .orElseGet(() -> userMissionRepository.save(UserMission.builder()
+                        .userId(userId)
+                        .missionId(stateMission.getId())
+                        .periodKey("00000000")  // null 불가라서 더미로 시작
+                        .progressCount(0)
+                        .completedAt(null)
+                        .rewardedAt(null)
+                        .build()));
 
-            int streak = today.map(UserMission::getStreak).orElse(0);
+        // 오늘 이미 출첵
+        if (todayKey.equals(state.getPeriodKey())) {
             return AttendanceCheckInResponse.builder()
                     .success(true)
+                    .alreadyCheckedIn(true)
                     .userId(userId)
-                    .periodKey(periodKey)
-                    .streak(streak)
+                    .periodKey(todayKey)
+                    .streak(state.getProgressCount())
                     .earnedTickets(0)
                     .bonusTickets(0)
                     .totalEarnedTickets(0)
-                    .message("이미 출석 체크가 완료되었습니다.")
+                    .message("오늘의 출석체크는 완료했습니다! 내일 다시 와주세요")
                     .build();
         }
 
-        // 2) 어제 기록 기반 streak 계산
-        String yesterdayKey = LocalDate.now().minusDays(1).format(PERIOD_FORMAT);
+        // 연속일수 계산
+        int nextStreak = yesterdayKey.equals(state.getPeriodKey())
+                ? state.getProgressCount() + 1
+                : 1;
 
-        int streak = 1;
-        Optional<UserMission> yesterday = userMissionRepository.findByUserIdAndMissionIdAndPeriodKey(userId, missionId, yesterdayKey);
-        if (yesterday.isPresent()) {
-            streak = yesterday.get().getStreak() + 1;
+        // 상태 업데이트
+        state.setPeriodKey(todayKey);
+        state.setProgressCount(nextStreak);
+        state.markCompletedNow();
+        state.clearRewardedAt();
+
+        int earnedTickets = 0;
+        int bonusTickets = 0;
+
+        // 일일 보상 지급
+        int dailyAmount = dailyMission.getRewardTicketAmount();
+        if (dailyAmount > 0) {
+            String idempotencyKey = "attendance:daily:" + userId + ":" + todayKey;
+            ticketService.earnTickets(new TicketEarnReqDto(
+                    userId,
+                    dailyAmount,
+                    "ATTENDANCE_DAILY",
+                    "MISSION",
+                    String.valueOf(state.getId()),
+                    idempotencyKey
+            ));
+            earnedTickets = dailyAmount;
         }
 
-        // 3) 오늘 user_mission 저장
-        UserMission userMission = UserMission.builder()
-                .userId(userId)
-                .missionId(missionId)
-                .periodKey(periodKey)
-                .status(UserMissionStatus.COMPLETED)
-                .streak(streak)
-                .build();
-        userMissionRepository.save(userMission);
+        // 보너스 지급
+        if (BONUS_CODES.containsKey(nextStreak)) {
+            Mission bonusMission = missionRepository.findByCode(BONUS_CODES.get(nextStreak))
+                    .orElseThrow(() -> new IllegalStateException("Bonus mission not found for day: " + nextStreak));
 
-        // 4) 기본 보상 지급
-        int earned = attendanceMission.getRewardAmount();
-        String earnIdempotencyKey = "attendance:" + userId + ":" + periodKey;
+            int bonusAmount = bonusMission.getRewardTicketAmount();
+            if (bonusAmount > 0) {
+                String idempotencyKey = "attendance:bonus:" + nextStreak + ":" + userId + ":" + todayKey;
+                ticketService.earnTickets(new TicketEarnReqDto(
+                        userId,
+                        bonusAmount,
+                        "ATTENDANCE_BONUS_" + nextStreak,
+                        "MISSION",
+                        String.valueOf(state.getId()),
+                        idempotencyKey
+                ));
+                bonusTickets = bonusAmount;
+                state.markRewardedNow();
+            }
 
-        TicketTransactionResDto earnTx = ticketService.earnTickets(
-                TicketEarnReqDto.builder()
-                        .userId(userId)
-                        .amount(earned)
-                        .reason("출석 체크 보상")
-                        .refType("MISSION")
-                        .refId(String.valueOf(userMission.getId()))
-                        .idempotencyKey(earnIdempotencyKey)
-                        .build()
-        );
-
-        // 5) 보너스(7/30) 지급
-        int bonus = 0;
-
-        if (streak == BONUS_7_DAYS) {
-            int bonusAmount = 5; // ← 여기 보너스 수치는 너희가 정해야 함
-            String bonusKey = "attendance_bonus7:" + userId + ":" + periodKey;
-
-            ticketService.earnTickets(
-                    TicketEarnReqDto.builder()
-                            .userId(userId)
-                            .amount(bonusAmount)
-                            .reason("연속 출석 7일 보너스")
-                            .refType("MISSION")
-                            .refId(String.valueOf(userMission.getId()))
-                            .idempotencyKey(bonusKey)
-                            .build()
-            );
-            bonus += bonusAmount;
+            // A 정책: 30일 보너스 지급 즉시 초기화(연속일수 0)
+            if (nextStreak == 30) {
+                state.setProgressCount(0);
+                state.setPeriodKey(todayKey);
+            }
         }
 
-        if (streak == BONUS_30_DAYS) {
-            int bonusAmount = 30; // ← 여기 보너스 수치는 너희가 정해야 함
-            String bonusKey = "attendance_bonus30:" + userId + ":" + periodKey;
+        int finalStreak = state.getProgressCount();
+        int total = earnedTickets + bonusTickets;
 
-            ticketService.earnTickets(
-                    TicketEarnReqDto.builder()
-                            .userId(userId)
-                            .amount(bonusAmount)
-                            .reason("연속 출석 30일 보너스")
-                            .refType("MISSION")
-                            .refId(String.valueOf(userMission.getId()))
-                            .idempotencyKey(bonusKey)
-                            .build()
-            );
-            bonus += bonusAmount;
+        String msg;
+        if (bonusTickets > 0) {
+            msg = "출석 완료! 보너스 티켓이 지급되었습니다";
+        } else {
+            msg = "출석 완료! 티켓이 지급되었습니다";
         }
-
-        log.info("출석 체크 완료 userId={}, periodKey={}, streak={}, earned={}, bonus={}", userId, periodKey, streak, earned, bonus);
 
         return AttendanceCheckInResponse.builder()
                 .success(true)
+                .alreadyCheckedIn(false)
                 .userId(userId)
-                .periodKey(periodKey) // 오늘 날짜 yyyyMMdd
-                .streak(streak)
-                .earnedTickets(earned)
-                .bonusTickets(bonus)
-                .totalEarnedTickets(earned + bonus)
-                .message("출석 체크 완료")
+                .periodKey(todayKey)
+                .streak(finalStreak)
+                .earnedTickets(earnedTickets)
+                .bonusTickets(bonusTickets)
+                .totalEarnedTickets(total)
+                .message(msg)
                 .build();
     }
 }

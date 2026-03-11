@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import luckydrop.demo.common.member.CustomUserPrincipal;
 import luckydrop.demo.mission.dto.response.AttendanceCheckInResponse;
 import luckydrop.demo.mission.service.AttendanceService;
+import org.springframework.context.annotation.Profile; // 테스트 11
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +17,10 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping("/check-in")
+    @Profile({"local", "dev"}) // 테스트 끝나면 지우기?
     public ResponseEntity<AttendanceCheckInResponse> checkIn(
-            @AuthenticationPrincipal CustomUserPrincipal principal
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @RequestParam(value = "overrideDate", required = false) String overrideDate // 테스트 22
     ) {
         Long userId = principal.getUser().getId();
         return ResponseEntity.ok(attendanceService.checkIn(userId));
