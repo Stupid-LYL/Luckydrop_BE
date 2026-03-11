@@ -17,7 +17,7 @@ public class LedgerItemResDto {
     private int amount;
     private String reason;
     private String refType;
-    private String refId;
+    private Long refId;
     private String idempotencyKey;
     private LocalDateTime createdAt;
 }
