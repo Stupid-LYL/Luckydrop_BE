@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.common.auth.JwtTokenProvider;
+import luckydrop.demo.ticket.dto.request.TicketEarnReqDto;
+import luckydrop.demo.ticket.service.TicketService;
 import luckydrop.demo.user.dto.request.ChangePasswordReqDto;
 import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
 import luckydrop.demo.user.dto.request.UserLoginReqDto;
@@ -22,10 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -38,13 +37,16 @@ public class UserService {
     private final TicketWalletRepository ticketWalletRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TicketService ticketService;
 
 
     public User create(UserSaveReqDto userSaveReqDto) {
-        // 이미 가입되어 있는 이메일 검증
-        if(userRepository.findByEmail(userSaveReqDto.getEmail()).isPresent()){
+        // 이메일 중복 검증
+        if (userRepository.findByEmail(userSaveReqDto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
         }
+
+        // User 빌드 (referred_by_code 포함)
         User newUser = User.builder()
                 .name(userSaveReqDto.getName())
                 .nickname(userSaveReqDto.getNickname())
@@ -52,19 +54,27 @@ public class UserService {
                 .address(userSaveReqDto.getAddress())
                 .email(userSaveReqDto.getEmail())
                 .password(passwordEncoder.encode(userSaveReqDto.getPassword()))
+                .invitationCode(generateUniqueInvitationCode())  // 자기 초대코드 생성 (예: UUID나 랜덤)
+                .referredByCode(userSaveReqDto.getReferredByCode())  // 추천인 코드 저장
                 .build();
 
-        User user = userRepository.save(newUser);
+        User savedUser = userRepository.save(newUser);
 
+        // 지갑 생성
         TicketWallet ticketWallet = TicketWallet.builder()
-                .user(newUser)
-                .balance(0)
+                .user(savedUser)
+                .balance(10)
                 .build();
-
         ticketWalletRepository.save(ticketWallet);
 
-        return user;
+        // 추천인 코드 검증 & 티켓 지급
+        if (userSaveReqDto.getReferredByCode() != null && !userSaveReqDto.getReferredByCode().isBlank()) {
+            validateAndRewardReferral(savedUser.getId(), userSaveReqDto.getReferredByCode());
+        }
+
+        return savedUser;
     }
+
 
     public Map<String, Object> login(UserLoginReqDto userLoginReqDto) {
         String email = userLoginReqDto.getEmail();
@@ -231,6 +241,7 @@ public class UserService {
                 .name(user.getName())
                 .phone(user.getPhone())
                 .address(user.getAddress())
+                .invitationCode(user.getInvitationCode())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();
@@ -276,6 +287,62 @@ public class UserService {
         }
 
         user.updatePassword(passwordEncoder.encode(dto.getNewPassword()));
+    }
+
+
+    @Transactional
+    public void validateAndRewardReferral(Long newUserId, String referredByCode) {
+        // 1. 추천인 찾기
+        User referrer = userRepository.findByInvitationCode(referredByCode)
+                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 추천인 코드입니다."));
+
+        if (referrer.getId() == newUserId) {
+            throw new IllegalArgumentException("자기 자신을 추천인으로 할 수 없습니다.");
+        }
+
+        String idempotencyKey = "REFERRAL_" + newUserId + "_" + System.currentTimeMillis();
+
+        // 2. 신규 유저에게 티켓 지급 (가입 보상, 예: 10티켓)
+        ticketService.earnTickets(TicketEarnReqDto.builder()
+                .userId(newUserId)
+                .amount(10)  // REFERRAL_SIGNUP 보상
+                .reason("회원가입 추천 보상")
+                .refType("REFERRAL")
+                .refId(referrer.getId())
+                .idempotencyKey(idempotencyKey + "_NEW")
+                .build());
+
+        // 3. 추천인에게 티켓 지급 (추천 성공 보상, 예: 5티켓)
+        ticketService.earnTickets(TicketEarnReqDto.builder()
+                .userId(referrer.getId())
+                .amount(5)   // REFERRAL_REWARD 보상
+                .reason("추천인 보상")
+                .refType("REFERRAL")
+                .refId(newUserId)
+                .idempotencyKey(idempotencyKey + "_REFERRER")
+                .build());
+    }
+
+    private String generateUniqueInvitationCode() {
+        int maxRetries = 10;  // 충돌 방지 재시도 횟수
+        for (int i = 0; i < maxRetries; i++) {
+            String code = generateCandidateCode();
+            if (userRepository.findByInvitationCode(code).isEmpty()) {
+                return code;  // 사용 가능하면 반환
+            }
+        }
+        throw new IllegalStateException("초대 코드를 생성할 수 없습니다. 재시도하세요.");
+    }
+
+    private String generateCandidateCode() {
+        // 8자리 알파벳+숫자 (예: AB12CD34)
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder code = new StringBuilder(8);
+        Random random = new Random();
+        for (int i = 0; i < 8; i++) {
+            code.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return code.toString();
     }
 
 

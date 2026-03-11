@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import luckydrop.demo.common.BaseEntity;
 import luckydrop.demo.user.entity.User;
 
+import java.time.LocalDateTime;
+
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,9 +38,8 @@ public class TicketLedger extends BaseEntity {
     private String refType;
 
     @Column(name = "ref_id", nullable = true)
-    private String refId;
+    private Long refId;
 
-    @Column(name = "idempotency_key",nullable = false)
+    @Column(name = "idempotency_key",nullable = false, unique = true)
     private String idempotencyKey;
-
 }

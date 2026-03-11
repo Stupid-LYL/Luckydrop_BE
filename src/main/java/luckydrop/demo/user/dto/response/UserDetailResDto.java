@@ -18,6 +18,7 @@ public class UserDetailResDto {
     private String name;
     private String phone;
     private String address;
+    private String invitationCode;
     private String role;
     private LocalDateTime createdAt;
 }
