@@ -51,7 +51,7 @@ public class DrawEntryService {
                         .amount(totalCost)
                         .reason("DRAW_ENTRY")
                         .refType("DRAW")
-                        .refId(String.valueOf(drawId))
+                        .refId(drawId)
                         .idempotencyKey(idempotencyKey)
                         .build());
 

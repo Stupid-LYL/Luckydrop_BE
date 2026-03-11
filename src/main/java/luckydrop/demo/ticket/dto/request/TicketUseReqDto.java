@@ -14,6 +14,6 @@ public class TicketUseReqDto {
     private int amount;
     private String reason;  // "응모", "상품 교환" 등
     private String refType;  // "DRAW", "EXCHANGE" 등
-    private String refId;  // 응모 ID, 상품 ID 등
+    private Long refId;  // 응모 ID, 상품 ID 등
     private String idempotencyKey;
 }
