@@ -45,8 +45,8 @@ public class DrawBookmarkService {
     //드로우 목록 조회 N + 1 방지용
     public Set<Long> findBookmarkedDrawIds(Long userId, List<Long> drawIds) {
 
-        if (drawIds.isEmpty()) {
-            return Set.of();
+        if (userId == null || drawIds == null || drawIds.isEmpty()) {
+            return Collections.emptySet();
         }
 
         List<Long> bookmarkedIds =

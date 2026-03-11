@@ -95,8 +95,7 @@ public class DrawService {
         boolean isBookmarked = drawBookmarkService.isBookmarked(requesterUserId, drawId);
         long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries);
-
+        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries, 0);
     }
 
 

@@ -41,11 +41,11 @@ public class DrawQueryController {
         return ResponseEntity.ok(drawQueryService.getDrawDetail(drawId, userId));
     }
 
-    @GetMapping("/hot")
+    @GetMapping("/hot-banner")
     public ResponseEntity<HotBannerResponse> getHotBanner(
             @AuthenticationPrincipal CustomUserPrincipal principal
     ) {
-        Long userId = principal.getUser().getId();
+        Long userId = (principal == null) ? null : principal.getUser().getId();
         return ResponseEntity.ok(drawQueryService.getHotBanner(userId));
     }
 }

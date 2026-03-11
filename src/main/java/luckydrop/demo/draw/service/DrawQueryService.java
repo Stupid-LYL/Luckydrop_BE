@@ -15,6 +15,8 @@ import luckydrop.demo.draw.inventory.repository.InventoryImageRepository;
 import luckydrop.demo.draw.repository.DrawQueryIdRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
+import luckydrop.demo.ticket.entity.TicketWallet;
+import luckydrop.demo.ticket.repository.TicketWalletRepository;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ public class DrawQueryService {
     private final InventoryImageRepository inventoryImageRepository;
     private final DrawQueryIdRepository drawQueryIdRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
+    private final TicketWalletRepository ticketWalletRepository;
 
 
     // 컨트롤러용 wrapper (page,size -> Pageable)
@@ -62,14 +65,19 @@ public class DrawQueryService {
 
         // draw 엔티티 배치 조회 + 순서 복원
         List<Draw> draws = drawRepository.findAllByIdIn(drawIds);
-        Map<Long, Draw> drawMap = draws.stream().collect(Collectors.toMap(Draw::getId, Function.identity()));
+        Map<Long, Draw> drawMap = draws.stream()
+                .collect(Collectors.toMap(Draw::getId, Function.identity()));
+
         List<Draw> orderedDraws = drawIds.stream()
                 .map(drawMap::get)
                 .filter(Objects::nonNull)
                 .toList();
 
         // isBookmarked + bookmarkCount (기존 서비스 그대로 사용)
-        Set<Long> bookmarkedIds = drawBookmarkService.findBookmarkedDrawIds(userId, drawIds);
+        Set<Long> bookmarkedIds = (userId == null)
+                ? Collections.emptySet()
+                : drawBookmarkService.findBookmarkedDrawIds(userId, drawIds);
+
         var bookmarkCountMap = drawBookmarkService.findBookmarkCountMap(drawIds);
 
         // participantCount 배치
@@ -79,18 +87,13 @@ public class DrawQueryService {
                         DrawEntrySummaryRepository.DrawCountRow::getCnt
                 ));
 
-        for (Draw draw : draws) {
-            System.out.println("drawId = " + draw.getId());
-            System.out.println("inventoryId = " + draw.getInventory().getId());
-            System.out.println("images size = " + draw.getInventory().getImages().size());
-        }
-
         List<DrawCardResponse> content = orderedDraws.stream()
                 .map(draw -> {
                     Long drawId = draw.getId();
                     boolean isBookmarked = bookmarkedIds.contains(drawId);
                     long bookmarkCount = bookmarkCountMap.getOrDefault(drawId, 0L);
                     long participantCount = participantCountMap.getOrDefault(drawId, 0L);
+
                     return DrawCardResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
                 })
                 .toList();
@@ -100,15 +103,30 @@ public class DrawQueryService {
 
 
     public DrawDetailResponse getDrawDetail(Long drawId, Long userId) {
+
         Draw draw = drawRepository.findByIdAndStatusNot(drawId, DrawStatus.CANCEL)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 드로우입니다."));
 
-        boolean isBookmarked = drawBookmarkService.isBookmarked(userId, drawId);
-        long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
+        boolean isBookmarked = false;
+        Integer myTicketBalance = 0;
 
+        if (userId != null) {
+            isBookmarked = drawBookmarkService.isBookmarked(userId, drawId);
+
+            myTicketBalance = ticketWalletRepository.findByUserId(userId)
+                    .map(TicketWallet::getBalance)
+                    .orElse(0);
+        }
+
+        long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
         long participantCount = drawEntrySummaryRepository.countParticipants(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
+        return DrawDetailResponse.from(
+                draw,
+                isBookmarked,
+                bookmarkCount,
+                participantCount,
+                myTicketBalance);
     }
 
 
