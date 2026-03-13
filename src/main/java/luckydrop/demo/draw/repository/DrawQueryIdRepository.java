@@ -12,123 +12,135 @@ import java.time.LocalDateTime;
 
 public interface DrawQueryIdRepository extends JpaRepository<Draw, Long> {
 
-    //전체보기
+    // 1) LATEST
     @Query("""
         select d.id
         from Draw d
-        where d.status <> :excludedStatus
+        where (:tab = 'ALL' and d.status <> :cancel)
+           or (:tab = 'UPCOMING' and d.status = :draft and d.startAt > :now)
+           or (:tab = 'ONGOING' and (d.status = :active or d.status = :drawing) and d.startAt <= :now and d.endAt > :now)
+           or (:tab = 'CLOSED' and (d.status = :close or d.endAt <= :now))
         order by d.createdAt desc
     """)
-    Page<Long> findAllLatestIds(@Param("excludedStatus") DrawStatus excludedStatus,
-                                Pageable pageable);
+    Page<Long> findIdsByLatest(
+            @Param("tab") String tab,
+            @Param("now") LocalDateTime now,
+            @Param("draft") DrawStatus draft,
+            @Param("active") DrawStatus active,
+            @Param("drawing") DrawStatus drawing,
+            @Param("close") DrawStatus close,
+            @Param("cancel") DrawStatus cancel,
+            Pageable pageable
+    );
 
-    // UPCOMING status = DRAFT AND startAt > now
+    // 2) STARTED_DESC
     @Query("""
         select d.id
         from Draw d
-        where d.status = :draft
-            and d.startAt > :now
-        order by d.createdAt desc
-""")
-    Page<Long> findUpcomingLatestIds(@Param("draft") DrawStatus draft,
-                                     @Param("now")LocalDateTime now,
-                                     Pageable pageable);
-
-    // UPCOMING 찜 많은 순
-    @Query("""
-        select d.id
-        from Draw d
-        where d.status = :draft
-            and d.startAt > :now
-        order by
-          (select count(b) from DrawBookmark b
-            where b.id.drawId = d.id) desc,
-        d.createdAt desc
-""")
-    Page<Long> findUpcomingBookmarkIds(@Param("draft") DrawStatus draft,
-                                       @Param("now") LocalDateTime now,
-                                       Pageable pageable);
-
-
-    // ONGOING: (status = ACTIVE OR DRAWING) AND startAt <= now AND endAt > now
-    @Query("""
-        select d.id
-        from Draw d
-        where (d.status = :active or d.status = :drawing)
-          and d.startAt <= :now
-          and d.endAt > :now
-        order by d.startAt desc
+        where (:tab = 'ALL' and d.status <> :cancel)
+           or (:tab = 'UPCOMING' and d.status = :draft and d.startAt > :now)
+           or (:tab = 'ONGOING' and (d.status = :active or d.status = :drawing) and d.startAt <= :now and d.endAt > :now)
+           or (:tab = 'CLOSED' and (d.status = :close or d.endAt <= :now))
+        order by d.startAt desc, d.createdAt desc
     """)
-    Page<Long> findOngoingStartedDescIds(@Param("active") DrawStatus active,
-                                         @Param("drawing") DrawStatus drawing,
-                                         @Param("now") LocalDateTime now,
-                                         Pageable pageable);
+    Page<Long> findIdsByStartedDesc(
+            @Param("tab") String tab,
+            @Param("now") LocalDateTime now,
+            @Param("draft") DrawStatus draft,
+            @Param("active") DrawStatus active,
+            @Param("drawing") DrawStatus drawing,
+            @Param("close") DrawStatus close,
+            @Param("cancel") DrawStatus cancel,
+            Pageable pageable
+    );
 
-
-    // ONGOING 응모자 많은 순 (탭 정책): participantCount desc, tie startAt desc
+    // 3) ENDING_SOON
     @Query("""
         select d.id
         from Draw d
-        where (d.status = :active or d.status = :drawing)
-          and d.startAt <= :now
-          and d.endAt > :now
-        order by
-          (select count(s) from DrawEntrySummary s where s.drawId = d.id) desc,
-          d.startAt desc
-    """)
-    Page<Long> findOngoingParticipantIds(@Param("active") DrawStatus active,
-                                         @Param("drawing") DrawStatus drawing,
-                                         @Param("now") LocalDateTime now,
-                                         Pageable pageable);
-
-
-    // ONGOING 찜 많은 순 (탭 정책): bookmarkCount desc, tie startAt desc
-    @Query("""
-        select d.id
-        from Draw d
-        where (d.status = :active or d.status = :drawing)
-          and d.startAt <= :now
-          and d.endAt > :now
-        order by
-          (select count(b) from luckydrop.demo.draw.bookmark.entity.DrawBookmark b
-            where b.id.drawId = d.id) desc,
-          d.startAt desc
-    """)
-    Page<Long> findOngoingBookmarkIds(@Param("active") DrawStatus active,
-                                      @Param("drawing") DrawStatus drawing,
-                                      @Param("now") LocalDateTime now,
-                                      Pageable pageable);
-
-
-
-    // ONGOING 마감 임박 순 (탭 정책): endAt asc, tie startAt desc
-    @Query("""
-        select d.id
-        from Draw d
-        where (d.status = :active or d.status = :drawing)
-          and d.startAt <= :now
-          and d.endAt > :now
+        where (:tab = 'ALL' and d.status <> :cancel)
+           or (:tab = 'UPCOMING' and d.status = :draft and d.startAt > :now)
+           or (:tab = 'ONGOING' and (d.status = :active or d.status = :drawing) and d.startAt <= :now and d.endAt > :now)
+           or (:tab = 'CLOSED' and (d.status = :close or d.endAt <= :now))
         order by d.endAt asc, d.startAt desc
     """)
-    Page<Long> findOngoingEndingSoonIds(@Param("active") DrawStatus active,
-                                        @Param("drawing") DrawStatus drawing,
-                                        @Param("now") LocalDateTime now,
-                                        Pageable pageable);
+    Page<Long> findIdsByEndingSoon(
+            @Param("tab") String tab,
+            @Param("now") LocalDateTime now,
+            @Param("draft") DrawStatus draft,
+            @Param("active") DrawStatus active,
+            @Param("drawing") DrawStatus drawing,
+            @Param("close") DrawStatus close,
+            @Param("cancel") DrawStatus cancel,
+            Pageable pageable
+    );
 
-
-    // CLOSED: status = CLOSE OR endAt <= now
-    // CLOSED 정렬(고정): endAt desc
+    // 4) ENDED_DESC
     @Query("""
         select d.id
         from Draw d
-        where d.status = :close
-           or d.endAt <= :now
-        order by d.endAt desc
+        where (:tab = 'ALL' and d.status <> :cancel)
+           or (:tab = 'UPCOMING' and d.status = :draft and d.startAt > :now)
+           or (:tab = 'ONGOING' and (d.status = :active or d.status = :drawing) and d.startAt <= :now and d.endAt > :now)
+           or (:tab = 'CLOSED' and (d.status = :close or d.endAt <= :now))
+        order by d.endAt desc, d.createdAt desc
     """)
-    Page<Long> findClosedEndedDescIds(@Param("close") DrawStatus close,
-                                      @Param("now") LocalDateTime now,
-                                      Pageable pageable);
+    Page<Long> findIdsByEndedDesc(
+            @Param("tab") String tab,
+            @Param("now") LocalDateTime now,
+            @Param("draft") DrawStatus draft,
+            @Param("active") DrawStatus active,
+            @Param("drawing") DrawStatus drawing,
+            @Param("close") DrawStatus close,
+            @Param("cancel") DrawStatus cancel,
+            Pageable pageable
+    );
 
+    // 5) BOOKMARK
+    @Query("""
+        select d.id
+        from Draw d
+        where (:tab = 'ALL' and d.status <> :cancel)
+           or (:tab = 'UPCOMING' and d.status = :draft and d.startAt > :now)
+           or (:tab = 'ONGOING' and (d.status = :active or d.status = :drawing) and d.startAt <= :now and d.endAt > :now)
+           or (:tab = 'CLOSED' and (d.status = :close or d.endAt <= :now))
+        order by
+            (select count(b) from luckydrop.demo.draw.bookmark.entity.DrawBookmark b where b.id.drawId = d.id) desc,
+            d.createdAt desc
+    """)
+    Page<Long> findIdsByBookmark(
+            @Param("tab") String tab,
+            @Param("now") LocalDateTime now,
+            @Param("draft") DrawStatus draft,
+            @Param("active") DrawStatus active,
+            @Param("drawing") DrawStatus drawing,
+            @Param("close") DrawStatus close,
+            @Param("cancel") DrawStatus cancel,
+            Pageable pageable
+    );
+
+    // 6) PARTICIPANT
+    @Query("""
+        select d.id
+        from Draw d
+        where (:tab = 'ALL' and d.status <> :cancel)
+           or (:tab = 'UPCOMING' and d.status = :draft and d.startAt > :now)
+           or (:tab = 'ONGOING' and (d.status = :active or d.status = :drawing) and d.startAt <= :now and d.endAt > :now)
+           or (:tab = 'CLOSED' and (d.status = :close or d.endAt <= :now))
+        order by
+            (select count(s) from DrawEntrySummary s where s.drawId = d.id) desc,
+            d.createdAt desc
+    """)
+    Page<Long> findIdsByParticipant(
+            @Param("tab") String tab,
+            @Param("now") LocalDateTime now,
+            @Param("draft") DrawStatus draft,
+            @Param("active") DrawStatus active,
+            @Param("drawing") DrawStatus drawing,
+            @Param("close") DrawStatus close,
+            @Param("cancel") DrawStatus cancel,
+            Pageable pageable
+    );
 
     // 1순위: participantCount desc, tie endAt asc -> createdAt desc (ONGOING 대상으로 의미있음)
     @Query("""

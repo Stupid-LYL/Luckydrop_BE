@@ -47,9 +47,7 @@ public class DrawQueryService {
         return getDraws(userId, tab, sort, pageable);
     }
 
-    /**
-     *  명세 기반 목록 조회 (탭/정렬/tie-break/participant/bookmark)
-     */
+
     public Page<DrawCardResponse> getDraws(Long userId, DrawTab tab, DrawSort sortOrNull, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -206,30 +204,64 @@ public class DrawQueryService {
                 .build();
     }
 
-    private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sort) {
-        if (sort != null) return sort;
-        return DrawSort.LATEST;
+    private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sortOrNull) {
+        if (sortOrNull != null) {
+            return sortOrNull;
+        }
+
+        return switch (tab) {
+            case ALL -> DrawSort.LATEST;
+            case UPCOMING -> DrawSort.LATEST;
+            case ONGOING -> DrawSort.ENDING_SOON;
+            case CLOSED -> DrawSort.ENDED_DESC;
+        };
     }
 
     private Page<Long> findIdsByPolicy(DrawTab tab, DrawSort sort, LocalDateTime now, Pageable pageable) {
-        return switch (tab) {
-            case ALL -> switch (sort) {
-                //  전체 기본정렬: createdAt DESC
-                case LATEST -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
-                default -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
-            };
-            case UPCOMING -> switch (sort) {
-                case LATEST -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
-                case BOOKMARK -> drawQueryIdRepository.findUpcomingBookmarkIds(DrawStatus.DRAFT, now, pageable);
-                default -> drawQueryIdRepository.findUpcomingLatestIds(DrawStatus.DRAFT, now, pageable);
-            };
-            case ONGOING -> switch (sort) {
-                case PARTICIPANT -> drawQueryIdRepository.findOngoingParticipantIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-                case BOOKMARK -> drawQueryIdRepository.findOngoingBookmarkIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-                case ENDING_SOON -> drawQueryIdRepository.findOngoingEndingSoonIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-                default -> drawQueryIdRepository.findOngoingStartedDescIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-            };
-            case CLOSED -> drawQueryIdRepository.findClosedEndedDescIds(DrawStatus.CLOSE, now, pageable);
+        String tabName = tab.name();
+
+        return switch (sort) {
+            case LATEST -> drawQueryIdRepository.findIdsByLatest(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case STARTED_DESC -> drawQueryIdRepository.findIdsByStartedDesc(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case ENDING_SOON -> drawQueryIdRepository.findIdsByEndingSoon(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case ENDED_DESC -> drawQueryIdRepository.findIdsByEndedDesc(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case BOOKMARK -> drawQueryIdRepository.findIdsByBookmark(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case PARTICIPANT -> drawQueryIdRepository.findIdsByParticipant(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
         };
     }
 }
