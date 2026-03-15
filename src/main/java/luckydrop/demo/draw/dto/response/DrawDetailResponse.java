@@ -12,6 +12,8 @@ import java.util.List;
 @Builder
 public class DrawDetailResponse {
 
+    private Long hostUserId;
+
     private Long drawId;
     private String title;
     private String description;
@@ -31,8 +33,11 @@ public class DrawDetailResponse {
     private Integer price;
     private List<String> images;
 
+    private boolean endAtChanged;
+
     public static DrawDetailResponse from(Draw draw, boolean isBookmarked, long bookmarkCount, long participantCount) {
         return DrawDetailResponse.builder()
+                .hostUserId(draw.getUserId())
                 .drawId(draw.getId())
                 .title(draw.getTitle())
                 .description(draw.getDescription())
@@ -54,6 +59,7 @@ public class DrawDetailResponse {
                                 .map(img -> img.getImageUrl())
                                 .toList()
                 )
+                .endAtChanged(draw.isEndAtChanged())
                 .build();
     }
 
