@@ -33,9 +33,16 @@ public class DrawDetailResponse {
     private Integer price;
     private List<String> images;
 
+    private Integer myTicketBalance;
     private boolean endAtChanged;
 
-    public static DrawDetailResponse from(Draw draw, boolean isBookmarked, long bookmarkCount, long participantCount) {
+    public static DrawDetailResponse from(
+            Draw draw,
+            boolean isBookmarked,
+            long bookmarkCount,
+            long participantCount,
+            Integer myTicketBalance
+    ) {
         return DrawDetailResponse.builder()
                 .hostUserId(draw.getUserId())
                 .drawId(draw.getId())
@@ -49,6 +56,7 @@ public class DrawDetailResponse {
                 .isBookmarked(isBookmarked)
                 .bookmarkCount(bookmarkCount)
                 .participantCount(participantCount)
+                .myTicketBalance(myTicketBalance)
                 .productName(draw.getInventory().getName())
                 .brand(draw.getInventory().getBrand())
                 .productDescription(draw.getInventory().getDescription())

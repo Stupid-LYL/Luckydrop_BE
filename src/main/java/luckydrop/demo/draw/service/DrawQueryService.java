@@ -1,6 +1,7 @@
 package luckydrop.demo.draw.service;
 
 import lombok.RequiredArgsConstructor;
+import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
 import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
 import luckydrop.demo.draw.dto.response.DrawCardResponse;
@@ -9,9 +10,13 @@ import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.enums.DrawSort;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.enums.DrawTab;
+import luckydrop.demo.draw.inventory.entity.InventoryImage;
+import luckydrop.demo.draw.inventory.repository.InventoryImageRepository;
 import luckydrop.demo.draw.repository.DrawQueryIdRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
+import luckydrop.demo.ticket.entity.TicketWallet;
+import luckydrop.demo.ticket.repository.TicketWalletRepository;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +34,11 @@ public class DrawQueryService {
     private final DrawBookmarkService drawBookmarkService;
     private final DrawRepository drawRepository;
 
-    //  추가
+    private final DrawBookmarkRepository drawBookmarkRepository;
+    private final InventoryImageRepository inventoryImageRepository;
     private final DrawQueryIdRepository drawQueryIdRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
+    private final TicketWalletRepository ticketWalletRepository;
 
 
     // 컨트롤러용 wrapper (page,size -> Pageable)
@@ -40,9 +47,7 @@ public class DrawQueryService {
         return getDraws(userId, tab, sort, pageable);
     }
 
-    /**
-     *  명세 기반 목록 조회 (탭/정렬/tie-break/participant/bookmark)
-     */
+
     public Page<DrawCardResponse> getDraws(Long userId, DrawTab tab, DrawSort sortOrNull, Pageable pageable) {
         LocalDateTime now = LocalDateTime.now();
 
@@ -58,14 +63,19 @@ public class DrawQueryService {
 
         // draw 엔티티 배치 조회 + 순서 복원
         List<Draw> draws = drawRepository.findAllByIdIn(drawIds);
-        Map<Long, Draw> drawMap = draws.stream().collect(Collectors.toMap(Draw::getId, Function.identity()));
+        Map<Long, Draw> drawMap = draws.stream()
+                .collect(Collectors.toMap(Draw::getId, Function.identity()));
+
         List<Draw> orderedDraws = drawIds.stream()
                 .map(drawMap::get)
                 .filter(Objects::nonNull)
                 .toList();
 
         // isBookmarked + bookmarkCount (기존 서비스 그대로 사용)
-        Set<Long> bookmarkedIds = drawBookmarkService.findBookmarkedDrawIds(userId, drawIds);
+        Set<Long> bookmarkedIds = (userId == null)
+                ? Collections.emptySet()
+                : drawBookmarkService.findBookmarkedDrawIds(userId, drawIds);
+
         var bookmarkCountMap = drawBookmarkService.findBookmarkCountMap(drawIds);
 
         // participantCount 배치
@@ -81,6 +91,7 @@ public class DrawQueryService {
                     boolean isBookmarked = bookmarkedIds.contains(drawId);
                     long bookmarkCount = bookmarkCountMap.getOrDefault(drawId, 0L);
                     long participantCount = participantCountMap.getOrDefault(drawId, 0L);
+
                     return DrawCardResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
                 })
                 .toList();
@@ -90,71 +101,167 @@ public class DrawQueryService {
 
 
     public DrawDetailResponse getDrawDetail(Long drawId, Long userId) {
+
         Draw draw = drawRepository.findByIdAndStatusNot(drawId, DrawStatus.CANCEL)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 드로우입니다."));
 
-        boolean isBookmarked = drawBookmarkService.isBookmarked(userId, drawId);
-        long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
+        boolean isBookmarked = false;
+        Integer myTicketBalance = 0;
 
+        if (userId != null) {
+            isBookmarked = drawBookmarkService.isBookmarked(userId, drawId);
+
+            myTicketBalance = ticketWalletRepository.findByUserId(userId)
+                    .map(TicketWallet::getBalance)
+                    .orElse(0);
+        }
+
+        long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
         long participantCount = drawEntrySummaryRepository.countParticipants(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, participantCount);
+        return DrawDetailResponse.from(
+                draw,
+                isBookmarked,
+                bookmarkCount,
+                participantCount,
+                myTicketBalance);
     }
 
-    /**
-     * HOT 배너
-     */
-    public HotBannerResponse getHotBanner() {
+
+    public HotBannerResponse getHotBanner(Long userId) {
+
         LocalDateTime now = LocalDateTime.now();
 
-        // 1순위
+        Long drawId = null;
+        String reason = "EMPTY";
+
+        // 1순위 인기 진행중
         Page<Long> p1 = drawQueryIdRepository.findHot1PopularOngoingIds(
                 DrawStatus.ACTIVE, DrawStatus.DRAWING, now, PageRequest.of(0, 1));
+
         if (!p1.isEmpty()) {
-            return HotBannerResponse.builder().drawId(p1.getContent().get(0)).reason("POPULAR").build();
+            drawId = p1.getContent().get(0);
+            reason = "POPULAR";
         }
 
-        // 2순위
-        Page<Long> p2 = drawQueryIdRepository.findHot2UpcomingBookmarkIds(
-                DrawStatus.DRAFT, now, PageRequest.of(0, 1));
-        if (!p2.isEmpty()) {
-            return HotBannerResponse.builder().drawId(p2.getContent().get(0)).reason("UPCOMING_BOOKMARK").build();
+        // 2순위 오픈 예정 북마크
+        if (drawId == null) {
+            Page<Long> p2 = drawQueryIdRepository.findHot2UpcomingBookmarkIds(
+                    DrawStatus.DRAFT, now, PageRequest.of(0, 1));
+
+            if (!p2.isEmpty()) {
+                drawId = p2.getContent().get(0);
+                reason = "UPCOMING_BOOKMARK";
+            }
         }
 
-        // 3순위
-        Page<Long> p3 = drawQueryIdRepository.findHot3RecentStartedIds(
-                DrawStatus.ACTIVE, DrawStatus.DRAWING, now, PageRequest.of(0, 1));
-        if (!p3.isEmpty()) {
-            return HotBannerResponse.builder().drawId(p3.getContent().get(0)).reason("RECENT_STARTED").build();
+        // 3순위 최근 시작
+        if (drawId == null) {
+            Page<Long> p3 = drawQueryIdRepository.findHot3RecentStartedIds(
+                    DrawStatus.ACTIVE, DrawStatus.DRAWING, now, PageRequest.of(0, 1));
+
+            if (!p3.isEmpty()) {
+                drawId = p3.getContent().get(0);
+                reason = "RECENT_STARTED";
+            }
         }
 
-        return HotBannerResponse.builder().drawId(null).reason("EMPTY").build();
+        if (drawId == null) {
+            return HotBannerResponse.builder()
+                    .reason("EMPTY")
+                    .build();
+        }
+
+        // 실제 Draw 조회
+        Draw draw = drawRepository.findById(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("draw not found"));
+
+        // 이미지 조회
+        List<String> images = inventoryImageRepository
+                .findByInventoryIdOrderBySortOrderAsc(draw.getInventory().getId())
+                .stream()
+                .map(InventoryImage::getImageUrl)
+                .toList();
+
+        // 북마크 여부
+        boolean isBookmarked = drawBookmarkRepository
+                .existsByIdUserIdAndIdDrawId(userId, drawId);
+
+        return HotBannerResponse.builder()
+                .drawId(drawId)
+                .reason(reason)
+
+                .title(draw.getTitle())
+                .productName(draw.getInventory().getName())
+
+                .images(images)
+                .isBookmarked(isBookmarked)
+
+                .ticketCostEntry(draw.getTicketCostEntry())
+                .startAt(draw.getStartAt())
+                .endAt(draw.getEndAt())
+
+                .build();
     }
 
-    private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sort) {
-        if (sort != null) return sort;
-        return DrawSort.LATEST;
+    private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sortOrNull) {
+        if (sortOrNull != null) {
+            return sortOrNull;
+        }
+
+        return switch (tab) {
+            case ALL -> DrawSort.LATEST;
+            case UPCOMING -> DrawSort.LATEST;
+            case ONGOING -> DrawSort.ENDING_SOON;
+            case CLOSED -> DrawSort.ENDED_DESC;
+        };
     }
 
     private Page<Long> findIdsByPolicy(DrawTab tab, DrawSort sort, LocalDateTime now, Pageable pageable) {
-        return switch (tab) {
-            case ALL -> switch (sort) {
-                //  전체 기본정렬: createdAt DESC
-                case LATEST -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
-                default -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
-            };
-            case UPCOMING -> switch (sort) {
-                case LATEST -> drawQueryIdRepository.findAllLatestIds(DrawStatus.CANCEL, pageable);
-                case BOOKMARK -> drawQueryIdRepository.findUpcomingBookmarkIds(DrawStatus.DRAFT, now, pageable);
-                default -> drawQueryIdRepository.findUpcomingLatestIds(DrawStatus.DRAFT, now, pageable);
-            };
-            case ONGOING -> switch (sort) {
-                case PARTICIPANT -> drawQueryIdRepository.findOngoingParticipantIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-                case BOOKMARK -> drawQueryIdRepository.findOngoingBookmarkIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-                case ENDING_SOON -> drawQueryIdRepository.findOngoingEndingSoonIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-                default -> drawQueryIdRepository.findOngoingStartedDescIds(DrawStatus.ACTIVE, DrawStatus.DRAWING, now, pageable);
-            };
-            case CLOSED -> drawQueryIdRepository.findClosedEndedDescIds(DrawStatus.CLOSE, now, pageable);
+        String tabName = tab.name();
+
+        return switch (sort) {
+            case LATEST -> drawQueryIdRepository.findIdsByLatest(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case STARTED_DESC -> drawQueryIdRepository.findIdsByStartedDesc(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case ENDING_SOON -> drawQueryIdRepository.findIdsByEndingSoon(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case ENDED_DESC -> drawQueryIdRepository.findIdsByEndedDesc(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case BOOKMARK -> drawQueryIdRepository.findIdsByBookmark(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
+
+            case PARTICIPANT -> drawQueryIdRepository.findIdsByParticipant(
+                    tabName, now,
+                    DrawStatus.DRAFT, DrawStatus.ACTIVE, DrawStatus.DRAWING,
+                    DrawStatus.CLOSE, DrawStatus.CANCEL,
+                    pageable
+            );
         };
     }
 }

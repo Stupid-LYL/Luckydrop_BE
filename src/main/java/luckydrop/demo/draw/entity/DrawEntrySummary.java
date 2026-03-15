@@ -3,13 +3,14 @@ package luckydrop.demo.draw.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import luckydrop.demo.common.BaseEntity;
 
 @Entity
 @Table
 @IdClass(DrawEntrySummaryId.class)
 @Getter
 @NoArgsConstructor
-public class DrawEntrySummary {
+public class DrawEntrySummary extends BaseEntity {
 
     @Id
     @Column(name = "draw_id", nullable = false)
