@@ -1,6 +1,5 @@
 package luckydrop.demo.draw.bookmark.service;
 
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.bookmark.entity.DrawBookmark;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkCountView;
@@ -18,7 +17,6 @@ public class DrawBookmarkService {
 
     private final DrawBookmarkRepository drawBookmarkRepository;
     private final DrawRepository drawRepository;
-    private final EntityManager em;
 
     //찜하기
     public void bookmark(Long userId, Long drawId) {
@@ -32,14 +30,11 @@ public class DrawBookmarkService {
         }
 
         drawBookmarkRepository.save(DrawBookmark.of(userId, drawId));
-
-        em.flush();
     }
 
     //찜 취소
     public void unBookmark(Long userId, Long drawId) {
         drawBookmarkRepository.deleteByIdUserIdAndIdDrawId(userId, drawId);
-        em.flush();
     }
 
     //상세 조회시 단건 체크
