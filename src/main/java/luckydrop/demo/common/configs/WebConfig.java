@@ -21,8 +21,6 @@ public class WebConfig implements WebMvcConfigurer {
                 .toUri()
                 .toString();
 
-        System.out.println("정적 이미지 경로 매핑" + location);
-
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(location);
     }

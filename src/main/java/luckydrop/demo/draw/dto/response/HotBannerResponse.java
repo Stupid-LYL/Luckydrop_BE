@@ -1,5 +1,6 @@
 package luckydrop.demo.draw.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -18,7 +19,8 @@ public class HotBannerResponse {
 
     private List<String> images;
 
-    private Boolean isBookmarked;
+    @JsonProperty("isBookmarked")
+    private boolean isBookmarked;
 
     private Integer ticketCostEntry;
     private LocalDateTime endAt;

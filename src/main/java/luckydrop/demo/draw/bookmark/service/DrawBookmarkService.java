@@ -1,12 +1,12 @@
 package luckydrop.demo.draw.bookmark.service;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.bookmark.entity.DrawBookmark;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkCountView;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -38,6 +38,7 @@ public class DrawBookmarkService {
     }
 
     //상세 조회시 단건 체크
+    @Transactional(readOnly = true)
     public boolean isBookmarked(Long userId, Long drawId) {
         return drawBookmarkRepository.existsByIdUserIdAndIdDrawId(userId, drawId);
     }

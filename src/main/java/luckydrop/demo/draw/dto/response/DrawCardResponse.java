@@ -1,5 +1,6 @@
 package luckydrop.demo.draw.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 import luckydrop.demo.draw.entity.Draw;
@@ -18,6 +19,8 @@ public class DrawCardResponse {
     private String imageUrl;
 
     private DrawStatus status;
+
+    @JsonProperty("isBookmarked")
     private boolean isBookmarked;
 
     private LocalDateTime startAt;
