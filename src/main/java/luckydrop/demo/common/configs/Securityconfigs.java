@@ -38,7 +38,7 @@ public class Securityconfigs {
                         "/api/ticket/use", "/api/ticket/earn", "/api/ticket/adjust",
                         "/api/signup/email", "/api/signup/emailAuth",
                         "/uploads/**",
-                        "/api/draws", "/api/draws/hot-banner", "/api/draw/create",
+                        "/api/draws", "/api/draws/hot-banner", "/api/draws/create",
                         "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //세션방식을 사용하지 않겠다 라는 의미
