@@ -1,5 +1,6 @@
 package luckydrop.demo.draw.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 import luckydrop.demo.draw.entity.Draw;
@@ -12,6 +13,8 @@ import java.util.List;
 @Builder
 public class DrawDetailResponse {
 
+    private Long hostUserId;
+
     private Long drawId;
     private String title;
     private String description;
@@ -21,6 +24,7 @@ public class DrawDetailResponse {
     private LocalDateTime endAt;
     private DrawStatus status;
 
+    @JsonProperty("isBookmarked")
     private boolean isBookmarked;
     private long participantCount;
     private long bookmarkCount;
@@ -31,8 +35,18 @@ public class DrawDetailResponse {
     private Integer price;
     private List<String> images;
 
-    public static DrawDetailResponse from(Draw draw, boolean isBookmarked, long bookmarkCount, long participantCount) {
+    private Integer myTicketBalance;
+    private boolean endAtChanged;
+
+    public static DrawDetailResponse from(
+            Draw draw,
+            boolean isBookmarked,
+            long bookmarkCount,
+            long participantCount,
+            Integer myTicketBalance
+    ) {
         return DrawDetailResponse.builder()
+                .hostUserId(draw.getUserId())
                 .drawId(draw.getId())
                 .title(draw.getTitle())
                 .description(draw.getDescription())
@@ -44,6 +58,7 @@ public class DrawDetailResponse {
                 .isBookmarked(isBookmarked)
                 .bookmarkCount(bookmarkCount)
                 .participantCount(participantCount)
+                .myTicketBalance(myTicketBalance)
                 .productName(draw.getInventory().getName())
                 .brand(draw.getInventory().getBrand())
                 .productDescription(draw.getInventory().getDescription())
@@ -54,6 +69,7 @@ public class DrawDetailResponse {
                                 .map(img -> img.getImageUrl())
                                 .toList()
                 )
+                .endAtChanged(draw.isEndAtChanged())
                 .build();
     }
 
