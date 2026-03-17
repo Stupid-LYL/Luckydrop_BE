@@ -95,7 +95,7 @@ public class AttendanceService {
                     dailyAmount,
                     "ATTENDANCE_DAILY",
                     "MISSION",
-                    String.valueOf(state.getId()),
+                    state.getId(),
                     idempotencyKey
             ));
             earnedTickets = dailyAmount;
@@ -114,7 +114,7 @@ public class AttendanceService {
                         bonusAmount,
                         "ATTENDANCE_BONUS_" + nextStreak,
                         "MISSION",
-                        String.valueOf(state.getId()),
+                        state.getId(),
                         idempotencyKey
                 ));
                 bonusTickets = bonusAmount;
