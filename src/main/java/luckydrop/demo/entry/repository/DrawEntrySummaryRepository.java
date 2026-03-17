@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySummary, DrawEntrySummaryId> {
 
@@ -20,6 +21,8 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
         Long getUserId();
         long getEntryCount(); // 이미 사용한 티켓 수
     }
+
+    Optional<DrawEntrySummary> findByDrawIdAndUserId(Long drawId, Long userId);
 
     @Query("""
         select s.userId as userId, s.entryCount as entryCount

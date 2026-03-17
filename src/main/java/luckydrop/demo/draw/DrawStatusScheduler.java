@@ -16,7 +16,7 @@ public class DrawStatusScheduler {
 
     private final DrawRepository drawRepository;
 
-    @Scheduled(fixedDelay = 30_000)
+    @Scheduled(fixedDelay = 60_000)
     @Transactional
     public void updateDrawStatus()
     {
