@@ -27,5 +27,4 @@ public class ImageController {
         List<String> imageUrls = imageService.uploadImages(images);
         return ResponseEntity.ok(new ImageUploadResponse(imageUrls));
     }
-
 }
