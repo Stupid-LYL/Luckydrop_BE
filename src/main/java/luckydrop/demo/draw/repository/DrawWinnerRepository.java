@@ -7,11 +7,9 @@ import java.util.List;
 
 public interface DrawWinnerRepository  extends JpaRepository<DrawWinner, Long> {
 
-    boolean existsByDrawId(Long drawId); // 드로우 추첨 완료 여부
+    boolean existsByDrawId(Long drawId);
 
-    boolean existsByDrawIdAndUserId(Long drawId, Long userId); // 현재 유저 당첨 여부 확인
-
-    List<DrawWinner> findByDrawId(Long drawId); // 드로우 전체 당첨자
+    List<DrawWinner> findByDrawId(Long drawId);
 
     //유저별 당첨 조회
     List<DrawWinner> findByUserId(Long userId);

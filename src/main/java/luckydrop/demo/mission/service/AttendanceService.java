@@ -7,6 +7,7 @@ import luckydrop.demo.mission.entity.UserMission;
 import luckydrop.demo.mission.repository.MissionRepository;
 import luckydrop.demo.mission.repository.UserMissionRepository;
 import luckydrop.demo.ticket.dto.request.TicketEarnReqDto;
+import luckydrop.demo.ticket.repository.TicketLedgerRepository;
 import luckydrop.demo.ticket.service.TicketService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class AttendanceService {
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
     private final TicketService ticketService;
+    private final TicketLedgerRepository ticketLedgerRepository;
 
     @Transactional
     public AttendanceCheckInResponse checkIn(Long userId) {
@@ -51,7 +53,7 @@ public class AttendanceService {
                 .orElseGet(() -> userMissionRepository.save(UserMission.builder()
                         .userId(userId)
                         .missionId(stateMission.getId())
-                        .periodKey("00000000")  // null 불가라서 더미로 시작
+                        .periodKey("00000000")
                         .progressCount(0)
                         .completedAt(null)
                         .rewardedAt(null)
@@ -88,15 +90,30 @@ public class AttendanceService {
 
         // 일일 보상 지급
         int dailyAmount = dailyMission.getRewardTicketAmount();
+        String dailyIdempotencyKey = "attendance:daily:" + userId + ":" + todayKey;
+
         if (dailyAmount > 0) {
-            String idempotencyKey = "attendance:daily:" + userId + ":" + todayKey;
+            if (ticketLedgerRepository.existsByIdempotencyKey(dailyIdempotencyKey)) {
+                return AttendanceCheckInResponse.builder()
+                        .success(true)
+                        .alreadyCheckedIn(true)
+                        .userId(userId)
+                        .periodKey(todayKey)
+                        .streak(state.getProgressCount())
+                        .earnedTickets(0)
+                        .bonusTickets(0)
+                        .totalEarnedTickets(0)
+                        .message("오늘의 출석체크는 이미 처리되었습니다.")
+                        .build();
+            }
+
             ticketService.earnTickets(new TicketEarnReqDto(
                     userId,
                     dailyAmount,
                     "ATTENDANCE_DAILY",
                     "MISSION",
                     state.getId(),
-                    idempotencyKey
+                    dailyIdempotencyKey
             ));
             earnedTickets = dailyAmount;
         }
@@ -108,20 +125,22 @@ public class AttendanceService {
 
             int bonusAmount = bonusMission.getRewardTicketAmount();
             if (bonusAmount > 0) {
-                String idempotencyKey = "attendance:bonus:" + nextStreak + ":" + userId + ":" + todayKey;
-                ticketService.earnTickets(new TicketEarnReqDto(
-                        userId,
-                        bonusAmount,
-                        "ATTENDANCE_BONUS_" + nextStreak,
-                        "MISSION",
-                        state.getId(),
-                        idempotencyKey
-                ));
-                bonusTickets = bonusAmount;
-                state.markRewardedNow();
+                String bonusIdempotencyKey = "attendance:bonus:" + nextStreak + ":" + userId + ":" + todayKey;
+
+                if (!ticketLedgerRepository.existsByIdempotencyKey(bonusIdempotencyKey)) {
+                    ticketService.earnTickets(new TicketEarnReqDto(
+                            userId,
+                            bonusAmount,
+                            "ATTENDANCE_BONUS_" + nextStreak,
+                            "MISSION",
+                            state.getId(),
+                            bonusIdempotencyKey
+                    ));
+                    bonusTickets = bonusAmount;
+                    state.markRewardedNow();
+                }
             }
 
-            // A 정책: 30일 보너스 지급 즉시 초기화(연속일수 0)
             if (nextStreak == 30) {
                 state.setProgressCount(0);
                 state.setPeriodKey(todayKey);

@@ -95,7 +95,8 @@ public class DrawService {
         boolean isBookmarked = drawBookmarkService.isBookmarked(requesterUserId, drawId);
         long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries, 0);
+        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries);
+
     }
 
 
@@ -163,6 +164,7 @@ public class DrawService {
     }
 
 
+
     public List<MyWinResponse> getMyWins(Long userId) {
         return drawWinnerRepository.findByUserId(userId).stream()
                 .map(w -> MyWinResponse.builder()
@@ -171,7 +173,6 @@ public class DrawService {
                 .toList();
     }
 
-    // 특정 드로우 전체 당첨자 조회
     @Transactional
     public DrawWinnerResponse getWinner(Long drawId) {
 
@@ -193,7 +194,6 @@ public class DrawService {
                 .build();
     }
 
-    //추첨 실행 + 당첨자 저장
     @Transactional
     public List<DrawWinner> drawWinner(Long drawId) {
 

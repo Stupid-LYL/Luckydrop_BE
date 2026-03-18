@@ -7,21 +7,25 @@ import luckydrop.demo.mission.enums.MissionType;
 import luckydrop.demo.mission.repository.MissionRepository;
 import luckydrop.demo.mission.repository.UserMissionRepository;
 import luckydrop.demo.ticket.dto.request.TicketEarnReqDto;
+import luckydrop.demo.ticket.repository.TicketLedgerRepository;
 import luckydrop.demo.ticket.service.TicketService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AdMissionService {
 
+    private static final DateTimeFormatter D = DateTimeFormatter.BASIC_ISO_DATE; // yyyyMMdd
+
     private final MissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
     private final TicketService ticketService;
+    private final TicketLedgerRepository ticketLedgerRepository;
 
     @Transactional
     public void completeAdMission(Long userId) {
@@ -31,15 +35,22 @@ public class AdMissionService {
                 .findByMissionTypeAndActiveTrue(MissionType.AD)
                 .orElseThrow(() -> new IllegalArgumentException("광고 미션이 존재하지 않습니다."));
 
-        // 오늘 날짜 periodKey
-        String periodKey = LocalDate.now().toString();
+        // 프로젝트 기존 스타일과 맞춤: yyyyMMdd
+        String periodKey = LocalDate.now().format(D);
 
         // 이미 수행했는지 확인
         Optional<UserMission> existing = userMissionRepository
                 .findByUserIdAndMissionIdAndPeriodKey(userId, mission.getId(), periodKey);
 
         if (existing.isPresent()) {
-            throw new IllegalStateException("오늘 광고 미션은 이미 수행했습니다.");
+            return;
+        }
+
+        String idempotencyKey = "AD:" + userId + ":" + periodKey;
+
+        // 이미 원장에 기록된 경우도 중복 처리로 보고 종료
+        if (ticketLedgerRepository.existsByIdempotencyKey(idempotencyKey)) {
+            return;
         }
 
         // UserMission 생성
@@ -48,7 +59,8 @@ public class AdMissionService {
                 .missionId(mission.getId())
                 .periodKey(periodKey)
                 .progressCount(1)
-                .completedAt(LocalDateTime.now())
+                .completedAt(java.time.LocalDateTime.now())
+                .rewardedAt(java.time.LocalDateTime.now())
                 .build();
 
         userMissionRepository.save(userMission);
@@ -60,7 +72,7 @@ public class AdMissionService {
                 .reason("광고 미션 보상")
                 .refType("MISSION_AD")
                 .refId(mission.getId())
-                .idempotencyKey("AD:" + userId + ":" + periodKey)
+                .idempotencyKey(idempotencyKey)
                 .build();
 
         ticketService.earnTickets(req);
