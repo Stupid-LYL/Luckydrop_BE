@@ -48,4 +48,5 @@ public class DrawQueryController {
         Long userId = (principal == null) ? null : principal.getUser().getId();
         return ResponseEntity.ok(drawQueryService.getHotBanner(userId));
     }
+
 }
