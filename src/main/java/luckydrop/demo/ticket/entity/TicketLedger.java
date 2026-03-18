@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import luckydrop.demo.common.BaseEntity;
+import luckydrop.demo.ticket.enums.TicketHistoryType;
 import luckydrop.demo.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -26,7 +27,7 @@ public class TicketLedger extends BaseEntity {
     private User user;
 
     @Column(nullable = false)
-    private String type;
+    private TicketHistoryType type;
 
     @Column(nullable = false)
     private int amount;

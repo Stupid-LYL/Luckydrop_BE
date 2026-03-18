@@ -39,7 +39,8 @@ public class Securityconfigs {
                         "/api/signup/email", "/api/signup/emailAuth",
                         "/uploads/**",
                         "/api/draws", "/api/draws/hot-banner", "/api/draws/create",
-                        "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password").permitAll()
+                        "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password",
+                        "/api/user/check-nickname", "/api/user/check-email").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //세션방식을 사용하지 않겠다 라는 의미
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
