@@ -1,4 +1,4 @@
-package luckyDrop.config;
+package luckydrop.demo.mission.config;
 
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.mission.entity.Mission;
