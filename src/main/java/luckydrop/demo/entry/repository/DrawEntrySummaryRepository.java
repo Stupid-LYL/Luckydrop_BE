@@ -32,7 +32,7 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
     @Query("""
                 select s.userId as userId, s.entryCount as entryCount
                 from DrawEntrySummary s
-                where s.drawId = :drawIdv
+                where s.drawId = :drawId
             """)
     List<RefundTarget> findRefundTargets(@Param("drawId") Long drawId);
 
