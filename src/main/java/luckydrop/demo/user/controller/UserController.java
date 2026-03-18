@@ -156,5 +156,37 @@ public class UserController {
         return ResponseEntity.ok("비밀번호가 변경되었습니다.");
     }
 
+    @PostMapping("/check-nickname")
+    public ResponseEntity<Map<String, Object>> checkNickname(@RequestBody Map<String, String> request) {
+        String nickname = request.get("nickname");
 
+        Map<String, Object> response = new HashMap<>();
+        try {
+            boolean available = userService.isNicknameAvailable(nickname);
+            response.put("available", available);
+            response.put("message", available ? "사용 가능한 닉네임입니다." : "이미 사용중인 닉네임입니다.");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("available", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // ✅ 새로 추가: 이메일 중복 체크
+    @PostMapping("/check-email")
+    public ResponseEntity<Map<String, Object>> checkEmail(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        Map<String, Object> response = new HashMap<>();
+        try {
+            boolean available = userService.isEmailAvailable(email);
+            response.put("available", available);
+            response.put("message", available ? "사용 가능한 이메일입니다." : "이미 가입된 이메일입니다.");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("available", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 }

@@ -10,6 +10,7 @@ import luckydrop.demo.ticket.dto.response.TicketTransactionResDto;
 import luckydrop.demo.ticket.dto.response.WalletResDto;
 import luckydrop.demo.ticket.entity.TicketLedger;
 import luckydrop.demo.ticket.entity.TicketWallet;
+import luckydrop.demo.ticket.enums.TicketHistoryType;
 import luckydrop.demo.ticket.repository.TicketLedgerRepository;
 import luckydrop.demo.ticket.repository.TicketWalletRepository;
 import luckydrop.demo.user.entity.User;
@@ -94,7 +95,7 @@ public class TicketService {
         // 내역 기록
         TicketLedger ledger = TicketLedger.builder()
                 .user(user)
-                .type("EARN")
+                .type(TicketHistoryType.EARN)
                 .amount(request.getAmount())
                 .reason(request.getReason())
                 .refType(request.getRefType())
@@ -147,7 +148,7 @@ public class TicketService {
         // 내역 기록
         TicketLedger ledger = TicketLedger.builder()
                 .user(user)
-                .type("USE")
+                .type(TicketHistoryType.USE)
                 .amount(-request.getAmount())  // 음수로 저장
                 .reason(request.getReason())
                 .refType(request.getRefType())
@@ -201,7 +202,7 @@ public class TicketService {
         // 내역 기록
         TicketLedger ledger = TicketLedger.builder()
                 .user(user)
-                .type("ADJUST")
+                .type(TicketHistoryType.ADJUST)
                 .amount(request.getAmount())
                 .reason(request.getReason())
                 .refType("ADMIN")
