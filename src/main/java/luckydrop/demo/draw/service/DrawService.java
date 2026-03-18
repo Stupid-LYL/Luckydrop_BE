@@ -21,9 +21,12 @@ import luckydrop.demo.draw.inventory.repository.InventoryRepository;
 import luckydrop.demo.draw.repository.DrawWinnerRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
+import luckydrop.demo.common.exception.BusinessException;
+import luckydrop.demo.common.exception.CustomValidationException;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -44,27 +47,27 @@ public class DrawService {
     @Transactional
     public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
         Draw draw = drawRepository.findById(drawId)
-                .orElseThrow(() ->  new IllegalArgumentException("드로우가 존재하지 않습니다."));
+                .orElseThrow(() ->  new BusinessException("드로우가 존재하지 않습니다."));
 
         // 1. status == ACTIVE 응모 시작한 드로우는 수정x
         if (draw.getStatus() == DrawStatus.ACTIVE) {
-            throw new IllegalArgumentException("응모가 시작된 드로우는 수정할 수 없습니다.");
+            throw new BusinessException("응모가 시작된 드로우는 수정할 수 없습니다.");
         }
 
         // 2. now < startAt 현재 시간이 시작 시간을 지났을 경우 수정x
         LocalDateTime now = LocalDateTime.now();
         if (!now.isBefore(draw.getStartAt())) {
-            throw new IllegalArgumentException("응모 시작 시간이 지난 드로우는 수정할 수 없습니다.");
+            throw new BusinessException("응모 시작 시간이 지난 드로우는 수정할 수 없습니다.");
         }
 
         // 3. 응모 0명인지 아닌지(entry_summary 기준)
         long totalEntries = drawEntrySummaryRepository.countParticipants(drawId);
         if (totalEntries > 0) {
-            throw new IllegalArgumentException("응모자가 발생한 드로우는 수정할 수 없습니다.");
+            throw new BusinessException("응모자가 발생한 드로우는 수정할 수 없습니다.");
         }
 
         if (!draw.getUserId().equals(requesterUserId)) {
-            throw new AccessDeniedException("해당 드로우를 생성한 HOST만 수정할 수 있습니다.");
+            throw new BusinessException("해당 드로우를 생성한 HOST만 수정할 수 있습니다.");
         }
 
         // 4. description 수정
@@ -75,17 +78,17 @@ public class DrawService {
         // 5. endAt 수정 (최대 1회 + 시간 연장만 가능)
         if (request.hasEndAt()) {
             if (draw.isEndAtChanged()) {
-                throw new IllegalArgumentException("종료 시간은 최대 1회만 수정할 수 있습니다.");
+                throw new BusinessException("종료 시간은 최대 1회만 수정할 수 있습니다.");
             }
 
             LocalDateTime newEndAt = request.getEndAt();
 
             if (!newEndAt.isAfter(draw.getStartAt())) {
-                throw new IllegalArgumentException("종료 시간은 시작 시간 이후여야 합니다.");
+                throw new BusinessException("종료 시간은 시작 시간 이후여야 합니다.");
             }
 
             if (!newEndAt.isAfter(draw.getEndAt())) {
-                throw new IllegalArgumentException("종료 시간은 기존 종료 시간보다 뒤로만 연장할 수 있습니다.");
+                throw new BusinessException("종료 시간은 기존 종료 시간보다 뒤로만 연장할 수 있습니다.");
             }
 
             draw.changeEndAt(newEndAt);
@@ -95,17 +98,14 @@ public class DrawService {
         boolean isBookmarked = drawBookmarkService.isBookmarked(requesterUserId, drawId);
         long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries, 0);
+        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries, 0, false, 0L);
     }
 
 
     @Transactional
     public Long createDraw(Long userId, DrawCreateRequest req) {
 
-        // 기본 검증
-        validateDrawTime(req.getStartAt(), req.getEndAt());
-        validateCounts(req.getTicketCostEntry(), req.getWinnerCount());
-        validateImages(req);
+        validateCreateRequest(req);
 
         // Inventory 생성/저장 (드로우 생성 시 상품 정보도 같이 저장)
         DrawCreateRequest.Product p = req.getProduct();
@@ -155,10 +155,9 @@ public class DrawService {
         try {
             drawRepository.save(draw);
         } catch (DataIntegrityViolationException e) {
-            throw new IllegalStateException("이미 이 상품으로 생성된 드로우가 있어요" ,e);
+            throw new BusinessException("이미 이 상품으로 생성된 드로우가 있어요");
         }
 
-        System.out.println("드로우를 저장하였습니다.");
         return draw.getId();
     }
 
@@ -176,11 +175,11 @@ public class DrawService {
     public DrawWinnerResponse getWinner(Long drawId) {
 
         Draw draw = drawRepository.findById(drawId)
-                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException("드로우가 존재하지 않습니다."));
 
         // 정책: CLOSED일 때만 공개
         if (draw.getStatus() != DrawStatus.CLOSE) {
-            throw new IllegalArgumentException("아직 추첨 결과가 공개되지 않았습니다.");
+            throw new BusinessException("아직 추첨 결과가 공개되지 않았습니다.");
         }
 
         List<Long> winnersUserIds = drawWinnerRepository.findByDrawId(drawId).stream()
@@ -200,7 +199,7 @@ public class DrawService {
         // DRAWING이면 CLOSED로 바꾼다"를 원자적으로 실행
         int updated = drawRepository.updateDrawingToClosed(drawId);
         if (updated == 0) {
-            throw new IllegalArgumentException("추첨을 진행할 수 없습니다. (상태가 DARWING이 아니거나 이미 처리됨)");
+            throw new BusinessException("추첨을 진행할 수 없습니다. (상태가 DARWING이 아니거나 이미 처리됨)");
         }
 
         List<DrawEntrySummary.ParticipantWeight> candidates = drawEntrySummaryRepository.findWeights(drawId);
@@ -210,15 +209,15 @@ public class DrawService {
 
         // winnerCount는 Draw에서 읽어야 하나까 draw 조회 1번 필요
         Draw draw = drawRepository.findByIdForUpdate(drawId)
-                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
+                .orElseThrow(() -> new BusinessException("드로우가 존재하지 않습니다."));
 
         if (drawWinnerRepository.existsByDrawId(drawId)) {
-            throw new IllegalArgumentException("이미 추첨이 완료된 드로우입니다.");
+            throw new BusinessException("이미 추첨이 완료된 드로우입니다.");
         }
 
         int winnerCount = draw.getWinnerCount();
         if (winnerCount <= 0) {
-            throw new IllegalArgumentException("winnerCount가 올바르지 않습니다.");
+            throw new BusinessException("당첨자 수가 올바르지 않습니다.");
         }
 
         int k  = Math.min(winnerCount, candidates.size());
@@ -265,37 +264,74 @@ public class DrawService {
     private record Scored(Long userId, double key) {}
 
 
-    private void validateDrawTime(LocalDateTime startAt, LocalDateTime endAt) {
+    private void validateDrawTime(
+            LocalDateTime startAt,
+            LocalDateTime endAt,
+            Map<String, String> errors
+    ) {
+        LocalDateTime now = LocalDateTime.now();
 
-        if (startAt == null || endAt == null) {
-            throw new IllegalArgumentException("시작시간/종료시간 입력은 필수");
-        }
-        if (!startAt.isBefore(endAt)) {
-            throw new IllegalArgumentException("시간 설정을 다시 해주세요. 시작 시간은 현재보다 미래여야 합니다.");
-        }
-    }
-
-
-    private void validateCounts(Integer ticketCostEntry, Integer winnerCount) {
-
-        if (ticketCostEntry == null || ticketCostEntry < 1) {
-            throw new IllegalArgumentException("필요 티켓 수 입력은 1장 이상");
+        if (startAt == null) {
+            errors.put("startAt", "응모 시작 시간을 입력해주세요.");
+        } else if (!startAt.isAfter(now)) {
+            errors.put("startAt", "응모 시작 시간은 현재 이후여야 합니다.");
         }
 
-        if (winnerCount == null || winnerCount < 1) {
-            throw new IllegalArgumentException("당첨자 수는 1명 이상");
+        if (endAt == null) {
+            errors.put("endAt", "응모 종료 시간을 입력해주세요.");
+        } else if (startAt != null && !endAt.isAfter(startAt)) {
+            errors.put("endAt", "응모 종료 시간은 시작 시간보다 이후여야 합니다.");
         }
     }
 
 
-    private void validateImages(DrawCreateRequest req) {
+    private void validateCounts(
+            Integer ticketCostEntry,
+            Integer winnerCount,
+            Map<String, String> errors) {
 
-        if (req.getProduct() == null || req.getProduct().getImages() == null || req.getProduct().getImages().isEmpty()) {
-            throw new IllegalArgumentException("상품 이미지는 최소 1개 필요");
+        if (ticketCostEntry == null) {
+            errors.put("ticketCostEntry", "필요 티켓 수를 입력해주세요");
+        } else if (ticketCostEntry < 1) {
+            errors.put("ticketCostEntry", "필요 티켓 수는 1장 이상이어야 합니다.");
         }
+
+        if (winnerCount == null) {
+            errors.put("winnerCount", "당첨자 수를 입력해주세요");
+        } else if (winnerCount < 1) {
+            errors.put("winnerCount", "당첨자 수는 1명 이상이어야 합니다.");
+        }
+    }
+
+    private void validateCreateRequest(DrawCreateRequest req) {
+        Map<String, String> errors = new LinkedHashMap<>();
+
+        validateDrawTime(req.getStartAt(), req.getEndAt(), errors);
+        validateCounts(req.getTicketCostEntry(), req.getWinnerCount(), errors);
+        validateImages(req, errors);
+
+        if (!errors.isEmpty()) {
+            throw new CustomValidationException(errors);
+        }
+    }
+
+
+    private void validateImages(DrawCreateRequest req, Map<String, String> errors) {
+
+        if (req.getProduct() == null) {
+            errors.put("product", "상품 정보를 입력해주세요.");
+            return;
+        }
+
+        if (req.getProduct().getImages() == null || req.getProduct().getImages().isEmpty()) {
+            errors.put("images", "상품 이미지는 최소 1개 등록해주세요.");
+            return;
+        }
+
         for (DrawCreateRequest.Image img : req.getProduct().getImages()) {
             if (img.getImageUrl() == null || img.getImageUrl().isBlank()) {
-                throw new IllegalArgumentException("imageUrl은 비어있으면 안됨");
+                errors.put("images", "이미지 URL은 비어 있을 수 없습니다.");
+                return;
             }
         }
     }

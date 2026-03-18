@@ -7,6 +7,7 @@ import luckydrop.demo.draw.dto.response.DrawDetailResponse;
 import luckydrop.demo.draw.dto.response.DrawCardResponse;
 import luckydrop.demo.draw.dto.response.HotBannerResponse;
 import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.draw.entity.DrawEntrySummary;
 import luckydrop.demo.draw.enums.DrawSort;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.enums.DrawTab;
@@ -119,12 +120,27 @@ public class DrawQueryService {
         long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
         long participantCount = drawEntrySummaryRepository.countParticipants(drawId);
 
+        Long entryCount = 0L;
+        boolean isEntered = false;
+
+        if (userId != null) {
+            Optional<DrawEntrySummary> summary =
+                    drawEntrySummaryRepository.findByDrawIdAndUserId(drawId, userId);
+
+            if (summary.isPresent()) {
+                isEntered = true;
+                entryCount = summary.get().getEntryCount();
+            }
+        }
+
         return DrawDetailResponse.from(
                 draw,
                 isBookmarked,
                 bookmarkCount,
                 participantCount,
-                myTicketBalance);
+                myTicketBalance,
+                isEntered,
+                entryCount);
     }
 
 

@@ -38,12 +38,18 @@ public class DrawDetailResponse {
     private Integer myTicketBalance;
     private boolean endAtChanged;
 
+    @JsonProperty("isEntered")
+    private boolean isEntered;
+    private Long entryCount;
+
     public static DrawDetailResponse from(
             Draw draw,
             boolean isBookmarked,
             long bookmarkCount,
             long participantCount,
-            Integer myTicketBalance
+            Integer myTicketBalance,
+            boolean isEntered,
+            Long entryCount
     ) {
         return DrawDetailResponse.builder()
                 .hostUserId(draw.getUserId())
@@ -57,6 +63,8 @@ public class DrawDetailResponse {
                 .status(draw.getStatus())
                 .isBookmarked(isBookmarked)
                 .bookmarkCount(bookmarkCount)
+                .isEntered(isEntered)
+                .entryCount(entryCount)
                 .participantCount(participantCount)
                 .myTicketBalance(myTicketBalance)
                 .productName(draw.getInventory().getName())
