@@ -1,15 +1,20 @@
 package luckydrop.demo.draw.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import luckydrop.demo.common.BaseEntity;
 
 @Entity
 @Table
 @IdClass(DrawEntrySummaryId.class)
 @Getter
+@Setter
 @NoArgsConstructor
-public class DrawEntrySummary {
+@AllArgsConstructor
+public class DrawEntrySummary extends BaseEntity {
 
     @Id
     @Column(name = "draw_id", nullable = false)

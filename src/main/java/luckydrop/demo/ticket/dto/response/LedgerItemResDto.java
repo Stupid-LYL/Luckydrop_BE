@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import luckydrop.demo.ticket.enums.TicketHistoryType;
 
 import java.time.LocalDateTime;
 
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class LedgerItemResDto {
     private Long id;
-    private String type;           // CHARGE / USE
+    private TicketHistoryType type;           // CHARGE / USE
     private int amount;
     private String reason;
     private String refType;

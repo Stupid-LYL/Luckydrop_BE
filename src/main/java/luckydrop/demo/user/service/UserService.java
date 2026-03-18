@@ -289,6 +289,35 @@ public class UserService {
         user.updatePassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
+    public boolean isNicknameAvailable(String nickname) {
+        validateNickname(nickname);
+        return !userRepository.existsByNickname(nickname);
+    }
+    public boolean isEmailAvailable(String email) {
+        validateEmail(email);
+        return !userRepository.existsByEmail(email);
+    }
+
+    private void validateNickname(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty()) {
+            throw new IllegalArgumentException("닉네임은 필수입니다.");
+        }
+        if (nickname.length() < 2 || nickname.length() > 16) {
+            throw new IllegalArgumentException("닉네임은 2~16자 사이여야 합니다.");
+        }
+        if (!nickname.matches("^[a-zA-Z가-힣0-9_]{2,16}$")) {
+            throw new IllegalArgumentException("닉네임은 한글, 영문, 숫자, _만 사용 가능합니다.");
+        }
+    }
+
+    private void validateEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("이메일은 필수입니다.");
+        }
+        if (!email.matches("^[A-Za-z0-9+_.-]+@([A-Za-z0-9.-]+\\.[A-Za-z]{2,})$")) {
+            throw new IllegalArgumentException("올바른 이메일 형식이 아닙니다.");
+        }
+    }
 
     @Transactional
     public void validateAndRewardReferral(Long newUserId, String referredByCode) {

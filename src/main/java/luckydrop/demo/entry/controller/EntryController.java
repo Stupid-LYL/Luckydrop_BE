@@ -4,8 +4,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.common.member.CustomUserPrincipal;
 import luckydrop.demo.entry.dto.request.DrawEntryRequest;
+import luckydrop.demo.entry.dto.request.MyEntryListRequest;
 import luckydrop.demo.entry.dto.response.DrawEntryResponse;
+import luckydrop.demo.entry.dto.response.MyEntryResponse;
+import luckydrop.demo.entry.dto.response.MyEntryStatsResponse;
 import luckydrop.demo.entry.service.DrawEntryService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -31,5 +35,22 @@ public class EntryController {
                 idempotencyKey
         );
         return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/my-entries")
+    public ResponseEntity<Page<MyEntryResponse>> getMyEntries(
+            MyEntryListRequest req,
+            @AuthenticationPrincipal CustomUserPrincipal principal
+    ) {
+        Page<MyEntryResponse> entries = drawEntryService.getMyEntries(principal.getUser().getId(), req);
+        return ResponseEntity.ok(entries);
+    }
+
+    @GetMapping("/my-entries/stats")
+    public ResponseEntity<MyEntryStatsResponse> getMyEntryStats(
+            @AuthenticationPrincipal CustomUserPrincipal principal
+    ) {
+        MyEntryStatsResponse stats = drawEntryService.getMyEntryStats(principal.getUser().getId());
+        return ResponseEntity.ok(stats);
     }
 }

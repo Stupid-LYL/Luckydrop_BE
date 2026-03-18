@@ -1,5 +1,6 @@
 package luckydrop.demo.ticket.entity;
 
+import luckydrop.demo.ticket.enums.TicketHistoryType;
 import luckydrop.demo.user.entity.User;
 
 public class TicketLedgerFactory {
@@ -15,7 +16,7 @@ public class TicketLedgerFactory {
 
         return TicketLedger.builder()
                 .user(user)
-                .type("REFUND")
+                .type(TicketHistoryType.REFUND)
                 .amount(amount)
                 .reason(reasonCode != null ? reasonCode : "DRAW_CANCEL REFUND")
                 .refType("DRAW")

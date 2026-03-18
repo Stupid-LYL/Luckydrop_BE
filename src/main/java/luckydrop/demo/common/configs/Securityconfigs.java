@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import luckydrop.demo.common.auth.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -36,7 +37,11 @@ public class Securityconfigs {
                         "/api/user/token/reissue" ,"/api/ticket/ledger/**", "/api/ticket/wallet/**",
                         "/api/ticket/use", "/api/ticket/earn", "/api/ticket/adjust",
                         "/api/signup/email", "/api/signup/emailAuth",
-                        "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password").permitAll().anyRequest().authenticated())
+                        "/uploads/**",
+                        "/api/draws", "/api/draws/hot-banner", "/api/draws/create",
+                        "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password",
+                        "/api/user/check-nickname", "/api/user/check-email").permitAll()
+                        .anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //세션방식을 사용하지 않겠다 라는 의미
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
