@@ -19,6 +19,8 @@ import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.draw.inventory.repository.InventoryImageRepository;
 import luckydrop.demo.draw.inventory.repository.InventoryRepository;
 import luckydrop.demo.draw.repository.DrawWinnerRepository;
+import luckydrop.demo.user.entity.User;
+import luckydrop.demo.user.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,7 @@ public class DrawService {
     private final InventoryImageRepository inventoryImageRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
     private final DrawBookmarkService drawBookmarkService;
+    private final UserRepository userRepository;
 
     @Transactional
     public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
@@ -98,7 +101,10 @@ public class DrawService {
         boolean isBookmarked = drawBookmarkService.isBookmarked(requesterUserId, drawId);
         long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries, 0, false, 0L);
+        User hostUser = userRepository.findById(draw.getUserId())
+                .orElseThrow();
+
+        return DrawDetailResponse.from(draw, hostUser.getNickname(), isBookmarked, bookmarkCount, totalEntries, 0, false, 0L);
     }
 
 

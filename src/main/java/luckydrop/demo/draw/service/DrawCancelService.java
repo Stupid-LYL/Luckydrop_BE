@@ -42,8 +42,14 @@ public class DrawCancelService {
             throw new AccessDeniedException("host만 드로우를 삭제할 수 있습니다.");
         }
 
-        if (draw.getStatus() != DrawStatus.DRAFT) {
-            throw new IllegalArgumentException("시작 시간 전의 드로우만 취소할 수 있습니다.");
+        long participantCount = drawEntrySummaryRepository.countParticipants(drawId);
+
+        boolean canDelete =
+                draw.getStatus() == DrawStatus.DRAFT
+                || (draw.getStatus() == DrawStatus.ACTIVE && participantCount == 0);
+
+        if (!canDelete) {
+            throw new IllegalArgumentException("이미 응모자가 발생한 드로우거나 시작 전의 드로우가 아닙니다.");
         }
 
         draw.cancel();

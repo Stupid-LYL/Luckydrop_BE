@@ -13,9 +13,10 @@ import java.util.List;
 @Builder
 public class DrawDetailResponse {
 
-    private Long hostUserId;
+    private Long hostUserId; //호스트 본인 맞는지 판단용
 
     private Long drawId;
+    private String hostNickname;
     private String title;
     private String description;
     private Integer ticketCostEntry;
@@ -44,6 +45,7 @@ public class DrawDetailResponse {
 
     public static DrawDetailResponse from(
             Draw draw,
+            String hostNickname,
             boolean isBookmarked,
             long bookmarkCount,
             long participantCount,
@@ -53,6 +55,7 @@ public class DrawDetailResponse {
     ) {
         return DrawDetailResponse.builder()
                 .hostUserId(draw.getUserId())
+                .hostNickname(hostNickname)
                 .drawId(draw.getId())
                 .title(draw.getTitle())
                 .description(draw.getDescription())
