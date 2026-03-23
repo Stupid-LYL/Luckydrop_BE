@@ -34,7 +34,7 @@ public class DrawScheduler {
 
         for (Draw d : drawingDraws) {
             try {
-                drawService.drawWinner(d.getId()); //내부에서 DRAWING->CLOSED 선점 + winners 저장/빈리스트
+                drawService.drawingWinner(d.getId()); //내부에서 DRAWING->CLOSED 선점 + winners 저장/빈리스트
                 succeeded++;
             } catch (Exception e) {
                 failed++;

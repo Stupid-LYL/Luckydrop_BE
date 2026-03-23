@@ -1,7 +1,9 @@
 package luckydrop.demo.draw.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.common.member.CustomUserPrincipal;
+import luckydrop.demo.draw.dto.request.AdminDrawForceCancelRequest;
 import luckydrop.demo.draw.service.DrawCancelService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,14 +29,13 @@ public class DrawCancelController {
     }
 
     @PostMapping("/admin/draws/{id}/force-cancel")
-    // @PreAuthorize("hasRole('ADMIN')") //추후 ADMIN ROLE 생길 경우에 사용
+    @PreAuthorize("hasRole('ADMIN')") //추후 ADMIN ROLE 생길 경우에 사용
     public ResponseEntity<Void> forceCancel(
             @PathVariable("id") Long drawId,
-            @RequestParam(required = false, defaultValue = "HOST_REQUEST") String reasonCode,
-            @RequestParam(required = false, defaultValue = "") String reasonDetail
-    ) {
+            @Valid @RequestBody AdminDrawForceCancelRequest request
+            ) {
 
-        drawCancelService.cancelByAdmin(drawId, reasonCode, reasonDetail);
+        drawCancelService.cancelByAdmin(drawId, request.reasonCode(), request.reasonDetail());
 
         return ResponseEntity.noContent().build();
     }
