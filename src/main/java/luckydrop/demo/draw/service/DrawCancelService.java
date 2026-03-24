@@ -1,5 +1,6 @@
 package luckydrop.demo.draw.service;
 
+import luckydrop.demo.draw.dto.response.AdminDrawSummaryResponse;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.entity.Draw;
@@ -18,6 +19,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -99,5 +101,10 @@ public class DrawCancelService {
         }
 
         job.markRefunded(now);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminDrawSummaryResponse> getForceCancelDraws() {
+        return drawRepository.findAdminForceCancelDraws(DrawStatus.CANCEL);
     }
 }
