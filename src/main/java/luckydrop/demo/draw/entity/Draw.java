@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import luckydrop.demo.common.BaseEntity;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.inventory.entity.Inventory;
+import luckydrop.demo.user.entity.User;
 
 import java.time.LocalDateTime;
 
@@ -28,6 +29,10 @@ public class Draw extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 
     //상품 정보
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

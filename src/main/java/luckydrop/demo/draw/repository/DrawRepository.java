@@ -1,6 +1,7 @@
 package luckydrop.demo.draw.repository;
 
 import jakarta.persistence.LockModeType;
+import luckydrop.demo.draw.dto.response.AdminDrawSummaryResponse;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.enums.DrawStatus;
 import org.springframework.data.domain.Page;
@@ -73,7 +74,22 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
 """)
     List<Draw> findReadyForDrawing(@Param("status") DrawStatus status,
                                    @Param("now") LocalDateTime now);
+
+    @Query("""
+            select new luckydrop.demo.draw.dto.response.AdminDrawSummaryResponse(
+                    d.id,
+                    d.title,
+                    u.nickname,
+                    d.status,
+                    count(des.userId)
+                )
+                from Draw d
+                join User u on d.userId = u.id
+                left join DrawEntrySummary des on d.id = des.drawId
+                where d.status <> :cancelStatus
+                group by d.id, d.title, u.nickname, d.status
+            """)
+    List<AdminDrawSummaryResponse> findAdminForceCancelDraws(
+            @Param("cancelStatus") DrawStatus status
+    );
 }
-
-
-

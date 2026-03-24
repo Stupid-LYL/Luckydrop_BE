@@ -26,6 +26,7 @@ public class TicketLedger extends BaseEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TicketHistoryType type;
 

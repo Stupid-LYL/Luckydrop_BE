@@ -19,6 +19,8 @@ import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.draw.inventory.repository.InventoryImageRepository;
 import luckydrop.demo.draw.inventory.repository.InventoryRepository;
 import luckydrop.demo.draw.repository.DrawWinnerRepository;
+import luckydrop.demo.user.entity.User;
+import luckydrop.demo.user.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +45,7 @@ public class DrawService {
     private final InventoryImageRepository inventoryImageRepository;
     private final DrawEntrySummaryRepository drawEntrySummaryRepository;
     private final DrawBookmarkService drawBookmarkService;
+    private final UserRepository userRepository;
 
     @Transactional
     public DrawDetailResponse updateDraw(Long drawId, Long requesterUserId, DrawUpdateRequest request) {
@@ -98,7 +101,10 @@ public class DrawService {
         boolean isBookmarked = drawBookmarkService.isBookmarked(requesterUserId, drawId);
         long bookmarkCount = drawBookmarkService.getBookmarkCount(drawId);
 
-        return DrawDetailResponse.from(draw, isBookmarked, bookmarkCount, totalEntries, 0, false, 0L);
+        User hostUser = userRepository.findById(draw.getUserId())
+                .orElseThrow();
+
+        return DrawDetailResponse.from(draw, hostUser.getNickname(), isBookmarked, bookmarkCount, totalEntries, 0, false, 0L);
     }
 
 
@@ -171,30 +177,35 @@ public class DrawService {
     }
 
     // 특정 드로우 전체 당첨자 조회
-    @Transactional
+    @Transactional(readOnly = true)
     public DrawWinnerResponse getWinner(Long drawId) {
 
         Draw draw = drawRepository.findById(drawId)
                 .orElseThrow(() -> new BusinessException("드로우가 존재하지 않습니다."));
 
-        // 정책: CLOSED일 때만 공개
         if (draw.getStatus() != DrawStatus.CLOSE) {
             throw new BusinessException("아직 추첨 결과가 공개되지 않았습니다.");
         }
 
-        List<Long> winnersUserIds = drawWinnerRepository.findByDrawId(drawId).stream()
-                .map(DrawWinner::getUserId)
-                .toList();
+        List<DrawWinnerResponse.WinnerItem> winners =
+                drawWinnerRepository.findWinners(drawId)
+                        .stream()
+                        .map(w -> DrawWinnerResponse.WinnerItem.builder()
+                                .nickname(maskNickname(w.getNickname()))
+                                .usedTicketCount(w.getUsedTicketCount())
+                                .build()
+                        )
+                        .toList();
 
         return DrawWinnerResponse.builder()
                 .drawId(drawId)
-                .winnersUserIds(winnersUserIds)
+                .winners(winners)
                 .build();
     }
 
     //추첨 실행 + 당첨자 저장
     @Transactional
-    public List<DrawWinner> drawWinner(Long drawId) {
+    public List<DrawWinner> drawingWinner(Long drawId) {
 
         // DRAWING이면 CLOSED로 바꾼다"를 원자적으로 실행
         int updated = drawRepository.updateDrawingToClosed(drawId);
@@ -334,5 +345,32 @@ public class DrawService {
                 return;
             }
         }
+    }
+
+
+    private String maskNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            return "";
+        }
+
+        int length = nickname.length();
+
+        if (length == 1) {
+            return "*";
+        }
+
+        if (length == 2) {
+            return nickname.charAt(0) + "*";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(nickname.charAt(0));
+
+        for (int i = 1; i < length - 1; i++) {
+            sb.append("*");
+        }
+
+        sb.append(nickname.charAt(length - 1));
+        return sb.toString();
     }
 }
