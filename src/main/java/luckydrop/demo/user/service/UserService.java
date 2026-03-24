@@ -10,9 +10,11 @@ import luckydrop.demo.user.dto.request.ChangePasswordReqDto;
 import luckydrop.demo.user.dto.request.ProfileUpdateReqDto;
 import luckydrop.demo.user.dto.request.UserLoginReqDto;
 import luckydrop.demo.user.dto.request.UserSaveReqDto;
+import luckydrop.demo.user.dto.response.AdminUserResDto;
 import luckydrop.demo.user.dto.response.UserDetailResDto;
 import luckydrop.demo.user.dto.response.UserListResDto;
 import luckydrop.demo.user.dto.response.UserInfoResDto;
+import luckydrop.demo.user.entity.Role;
 import luckydrop.demo.user.entity.User;
 import luckydrop.demo.user.entity.RefreshToken;
 import luckydrop.demo.user.repository.UserRepository;
@@ -46,7 +48,6 @@ public class UserService {
             throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
         }
 
-        // User 빌드 (referred_by_code 포함)
         User newUser = User.builder()
                 .name(userSaveReqDto.getName())
                 .nickname(userSaveReqDto.getNickname())
@@ -54,8 +55,8 @@ public class UserService {
                 .address(userSaveReqDto.getAddress())
                 .email(userSaveReqDto.getEmail())
                 .password(passwordEncoder.encode(userSaveReqDto.getPassword()))
-                .invitationCode(generateUniqueInvitationCode())  // 자기 초대코드 생성 (예: UUID나 랜덤)
-                .referredByCode(userSaveReqDto.getReferredByCode())  // 추천인 코드 저장
+                .invitationCode(generateUniqueInvitationCode())
+                .referredByCode(userSaveReqDto.getReferredByCode())
                 .build();
 
         User savedUser = userRepository.save(newUser);
@@ -63,11 +64,24 @@ public class UserService {
         // 지갑 생성
         TicketWallet ticketWallet = TicketWallet.builder()
                 .user(savedUser)
-                .balance(10)
+                .balance(0)
                 .build();
         ticketWalletRepository.save(ticketWallet);
 
-        // 추천인 코드 검증 & 티켓 지급
+        // ⭐ 기본 가입 보상 (추천 코드 없어도 10티켓)
+        String signupIdempotencyKey = "SIGNUP_" + savedUser.getId();
+        ticketService.earnTickets(
+                TicketEarnReqDto.builder()
+                        .userId(savedUser.getId())
+                        .amount(10)
+                        .reason("회원가입 보상")
+                        .refType("SIGNUP")
+                        .refId(null)
+                        .idempotencyKey(signupIdempotencyKey)
+                        .build()
+        );
+
+        // ⭐ 추천 코드가 있으면 추천인 보상 처리
         if (userSaveReqDto.getReferredByCode() != null && !userSaveReqDto.getReferredByCode().isBlank()) {
             validateAndRewardReferral(savedUser.getId(), userSaveReqDto.getReferredByCode());
         }
@@ -289,6 +303,32 @@ public class UserService {
         user.updatePassword(passwordEncoder.encode(dto.getNewPassword()));
     }
 
+    public List<AdminUserResDto> getUsers(String query) {
+        List<User> users = (query == null || query.isBlank())
+                ? userRepository.findAllWithWallet()
+                : userRepository.findByNicknameOrEmailWithWallet(query);
+
+        return users.stream()
+                .map(u -> AdminUserResDto.builder()
+                        .id(String.valueOf(u.getId()))
+                        .nickname(u.getNickname())
+                        .email(u.getEmail())
+                        .role(u.getRole().name())
+                        .joinedAt(u.getCreatedAt().toLocalDate().toString())
+                        .currentTickets(u.getTicketWallet() != null
+                                ? u.getTicketWallet().getBalance() : 0)
+                        .build())
+                .toList();
+    }
+
+    @Transactional
+    public void changeRole(String userId, String role) {
+        User user = userRepository.findById(Long.valueOf(userId))
+                .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+        user.changeRole(Role.valueOf(role));
+    }
+
+
     public boolean isNicknameAvailable(String nickname) {
         validateNickname(nickname);
         return !userRepository.existsByNickname(nickname);
@@ -321,7 +361,6 @@ public class UserService {
 
     @Transactional
     public void validateAndRewardReferral(Long newUserId, String referredByCode) {
-        // 1. 추천인 찾기
         User referrer = userRepository.findByInvitationCode(referredByCode)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 추천인 코드입니다."));
 
@@ -329,27 +368,31 @@ public class UserService {
             throw new IllegalArgumentException("자기 자신을 추천인으로 할 수 없습니다.");
         }
 
-        String idempotencyKey = "REFERRAL_" + newUserId + "_" + System.currentTimeMillis();
+        String idempotencyKey = "REFERRAL_" + newUserId + "_" + referrer.getId();
 
-        // 2. 신규 유저에게 티켓 지급 (가입 보상, 예: 10티켓)
-        ticketService.earnTickets(TicketEarnReqDto.builder()
-                .userId(newUserId)
-                .amount(10)  // REFERRAL_SIGNUP 보상
-                .reason("회원가입 추천 보상")
-                .refType("REFERRAL")
-                .refId(referrer.getId())
-                .idempotencyKey(idempotencyKey + "_NEW")
-                .build());
+        // 1. 가입자에게 추가 5티켓 (추천 보상)
+        ticketService.earnTickets(
+                TicketEarnReqDto.builder()
+                        .userId(newUserId)
+                        .amount(5)
+                        .reason("추천 회원가입 보상")
+                        .refType("REFERRED_SIGNUP")
+                        .refId(referrer.getId())
+                        .idempotencyKey(idempotencyKey + "_NEW")
+                        .build()
+        );
 
-        // 3. 추천인에게 티켓 지급 (추천 성공 보상, 예: 5티켓)
-        ticketService.earnTickets(TicketEarnReqDto.builder()
-                .userId(referrer.getId())
-                .amount(5)   // REFERRAL_REWARD 보상
-                .reason("추천인 보상")
-                .refType("REFERRAL")
-                .refId(newUserId)
-                .idempotencyKey(idempotencyKey + "_REFERRER")
-                .build());
+        // 2. 추천인에게 5티켓 (추천인 보상)
+        ticketService.earnTickets(
+                TicketEarnReqDto.builder()
+                        .userId(referrer.getId())
+                        .amount(5)
+                        .reason("추천인 보상")
+                        .refType("REFERRAL")
+                        .refId(newUserId)
+                        .idempotencyKey(idempotencyKey + "_REFERRER")
+                        .build()
+        );
     }
 
     private String generateUniqueInvitationCode() {

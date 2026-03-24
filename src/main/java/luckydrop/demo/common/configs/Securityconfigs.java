@@ -5,6 +5,7 @@ import luckydrop.demo.common.auth.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
 @Configuration
+//@EnableMethodSecurity
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class Securityconfigs {
@@ -40,7 +42,7 @@ public class Securityconfigs {
                         "/uploads/**",
                         "/api/draws", "/api/draws/hot-banner", "/api/draws/create",
                         "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password",
-                        "/api/user/check-nickname", "/api/user/check-email").permitAll()
+                        "/api/user/check-nickname", "/api/user/check-email", "/api/user/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //세션방식을 사용하지 않겠다 라는 의미
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
