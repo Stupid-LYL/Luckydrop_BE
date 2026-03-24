@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.common.BaseEntity;
+import luckydrop.demo.draw.entity.Draw;
+import luckydrop.demo.user.entity.User;
 
 @Slf4j
 @Entity
@@ -25,9 +27,21 @@ public class DrawBookmark extends BaseEntity {
     @EmbeddedId
     private DrawBookmarkId id;
 
-    public static DrawBookmark of(Long userId, Long drawId) {
+    @MapsId("userId")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @MapsId("drawId")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "draw_id", nullable = false)
+    private Draw draw;
+
+    public static DrawBookmark of(User user, Draw draw) {
         return DrawBookmark.builder()
-                .id(new DrawBookmarkId(userId, drawId))
+                .id(new DrawBookmarkId(user.getId(), draw.getId()))
+                .user(user)
+                .draw(draw)
                 .build();
     }
 

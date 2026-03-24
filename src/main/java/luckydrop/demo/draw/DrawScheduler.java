@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.draw.repository.DrawRepository;
-import luckydrop.demo.draw.service.DrawService;
+import luckydrop.demo.draw.service.DrawingService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +19,7 @@ import java.util.List;
 public class DrawScheduler {
 
     private final DrawRepository drawRepository;
-    private final DrawService drawService;
+    private final DrawingService drawingService;
 
     @Scheduled(fixedDelay =  60_000)
     public void runAutoDraw() {
@@ -34,7 +34,7 @@ public class DrawScheduler {
 
         for (Draw d : drawingDraws) {
             try {
-                drawService.drawingWinner(d.getId()); //내부에서 DRAWING->CLOSED 선점 + winners 저장/빈리스트
+                drawingService.drawingWinner(d.getId()); //내부에서 DRAWING->CLOSED 선점 + winners 저장/빈리스트
                 succeeded++;
             } catch (Exception e) {
                 failed++;

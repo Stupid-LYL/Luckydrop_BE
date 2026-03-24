@@ -1,6 +1,7 @@
 package luckydrop.demo.draw.repository;
 
 import luckydrop.demo.draw.dto.response.DrawWinnerResponse;
+import luckydrop.demo.draw.dto.response.HostWinnerInfoResponse;
 import luckydrop.demo.draw.entity.DrawWinner;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -29,4 +30,19 @@ public interface DrawWinnerRepository  extends JpaRepository<DrawWinner, Long> {
             where dw.drawId = :drawId
 """)
     List<DrawWinnerResponse.WinnerItem> findWinners(@Param("drawId") Long drawId);
+
+    @Query("""
+        select new luckydrop.demo.draw.dto.response.HostWinnerInfoResponse(
+        u.id,
+        u.name,
+        u.nickname,
+        u.phone,
+        u.address
+        )
+        from DrawWinner dw
+        join dw.user u
+        where dw.drawId = :drawId
+        order by dw.id asc
+""")
+    List<HostWinnerInfoResponse> findHostWinnerInfoByDrawId(@Param("drawId") Long drawId);
 }

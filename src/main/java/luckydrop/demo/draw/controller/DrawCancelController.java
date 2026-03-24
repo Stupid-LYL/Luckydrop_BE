@@ -6,7 +6,6 @@ import luckydrop.demo.common.member.CustomUserPrincipal;
 import luckydrop.demo.draw.dto.request.AdminDrawForceCancelRequest;
 import luckydrop.demo.draw.dto.response.AdminDrawSummaryResponse;
 import luckydrop.demo.draw.service.DrawCancelService;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
