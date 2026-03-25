@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.bookmark.entity.DrawBookmark;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkCountView;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
+import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.repository.DrawRepository;
+import luckydrop.demo.user.entity.User;
+import luckydrop.demo.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +20,7 @@ public class DrawBookmarkService {
 
     private final DrawBookmarkRepository drawBookmarkRepository;
     private final DrawRepository drawRepository;
+    private final UserRepository userRepository;
 
     //찜하기
     public void bookmark(Long userId, Long drawId) {
@@ -29,7 +33,14 @@ public class DrawBookmarkService {
             return;
         }
 
-        drawBookmarkRepository.save(DrawBookmark.of(userId, drawId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저가 존재하지 않습니다."));
+
+        Draw draw = drawRepository.findById(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다."));
+
+        DrawBookmark bookmark = DrawBookmark.of(user, draw);
+        drawBookmarkRepository.save(bookmark);
     }
 
     //찜 취소

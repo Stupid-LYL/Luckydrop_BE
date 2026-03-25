@@ -5,6 +5,7 @@ import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
 import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
 import luckydrop.demo.draw.dto.response.DrawDetailResponse;
 import luckydrop.demo.draw.dto.response.DrawCardResponse;
+import luckydrop.demo.draw.dto.response.HostWinnerInfoResponse;
 import luckydrop.demo.draw.dto.response.HotBannerResponse;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.entity.DrawEntrySummary;
@@ -15,6 +16,7 @@ import luckydrop.demo.draw.inventory.entity.InventoryImage;
 import luckydrop.demo.draw.inventory.repository.InventoryImageRepository;
 import luckydrop.demo.draw.repository.DrawQueryIdRepository;
 import luckydrop.demo.draw.repository.DrawRepository;
+import luckydrop.demo.draw.repository.DrawWinnerRepository;
 import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
 import luckydrop.demo.ticket.entity.TicketWallet;
 import luckydrop.demo.ticket.repository.TicketWalletRepository;
@@ -24,6 +26,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.security.access.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -37,6 +40,7 @@ public class DrawQueryService {
     private final DrawBookmarkService drawBookmarkService;
     private final DrawRepository drawRepository;
     private final UserRepository userRepository;
+    private final DrawWinnerRepository drawWinnerRepository;
 
     private final DrawBookmarkRepository drawBookmarkRepository;
     private final InventoryImageRepository inventoryImageRepository;
@@ -225,6 +229,18 @@ public class DrawQueryService {
                 .endAt(draw.getEndAt())
 
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<HostWinnerInfoResponse> getHostWinnerInfo(Long drawId, Long requesterUserId) {
+        Draw draw = drawRepository.findById(drawId)
+                .orElseThrow(() -> new IllegalArgumentException("드로우가 존재하지 않습니다. id=" + drawId));
+
+        if (draw.getUserId() == null || !draw.getUserId().equals(requesterUserId)) {
+            throw new AccessDeniedException("해당 드로우의 호스트만 당첨자 정보를 조회할 수 있습니다.");
+        }
+
+        return drawWinnerRepository.findHostWinnerInfoByDrawId(drawId);
     }
 
     private DrawSort resolveDefaultSort(DrawTab tab, DrawSort sortOrNull) {

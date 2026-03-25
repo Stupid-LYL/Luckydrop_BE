@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import luckydrop.demo.common.BaseEntity;
+import luckydrop.demo.user.entity.User;
 
 @Entity
 @Table
@@ -27,18 +28,26 @@ public class DrawEntrySummary extends BaseEntity {
     @Column(name = "entry_count", nullable = false)
     private Long entryCount;
 
-    // 임시 메서드
-    public static DrawEntrySummary create(Long drawId, Long userId) {
-        DrawEntrySummary summary = new DrawEntrySummary();
-        summary.drawId = drawId;
-        summary.userId = userId;
-        summary.entryCount = 0L;
-        return summary;
-    }
+    // 연관관계 명시용
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "draw_id",
+            insertable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_draw_entry_summary_draw")
+    )
+    private Draw draw;
 
-    public void increaseEntryCount() {
-        this.entryCount++;
-    }
+    // 연관관계 명시용
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            insertable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_draw_entry_summary_user")
+    )
+    private User user;
+
 
     public interface ParticipantWeight {
         Long getUserId();
