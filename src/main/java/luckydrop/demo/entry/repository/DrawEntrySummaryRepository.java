@@ -177,4 +177,8 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
               AND tl.ref_type = 'DRAW'
             """, nativeQuery = true)
     Long sumTicketUsedByUserId(@Param("userId") Long userId, @Param("type") TicketHistoryType type);  // TicketHistoryType -> String
+
+    boolean existsByUserIdAndCreatedAtBetween(Long userId, LocalDateTime start, LocalDateTime end); // 오늘 당일 드로우 참여확인
+
+    boolean existsByUserId(Long userId); // 첫 드로우 참여확인
 }
