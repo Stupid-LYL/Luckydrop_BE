@@ -18,6 +18,8 @@ import luckydrop.demo.draw.repository.DrawRepository;
 import luckydrop.demo.entry.repository.DrawEntrySummaryRepository;
 import luckydrop.demo.ticket.entity.TicketWallet;
 import luckydrop.demo.ticket.repository.TicketWalletRepository;
+import luckydrop.demo.user.entity.User;
+import luckydrop.demo.user.repository.UserRepository;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class DrawQueryService {
 
     private final DrawBookmarkService drawBookmarkService;
     private final DrawRepository drawRepository;
+    private final UserRepository userRepository;
 
     private final DrawBookmarkRepository drawBookmarkRepository;
     private final InventoryImageRepository inventoryImageRepository;
@@ -133,8 +136,12 @@ public class DrawQueryService {
             }
         }
 
+        User host = userRepository.findById(draw.getUserId())
+                .orElseThrow();
+
         return DrawDetailResponse.from(
                 draw,
+                host.getNickname(),
                 isBookmarked,
                 bookmarkCount,
                 participantCount,
