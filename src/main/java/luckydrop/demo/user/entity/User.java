@@ -58,7 +58,6 @@ public class User extends BaseEntity {
     private TicketWallet ticketWallet;
 
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "ticket_ledger")
     private List<TicketLedger> ticketLedger;
 
     public ProfileUpdateReqDto.ProfileUpdateReqDtoBuilder toProfileUpdateReqDto() {
@@ -76,5 +75,8 @@ public class User extends BaseEntity {
 
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
+    }
+    public void changeRole(Role role) {
+        this.role = role;
     }
 }

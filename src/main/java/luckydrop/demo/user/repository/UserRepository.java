@@ -3,8 +3,11 @@ package luckydrop.demo.user.repository;
 import jakarta.validation.constraints.Size;
 import luckydrop.demo.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,4 +19,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     Optional<User> findByInvitationCode(String invitationCode);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.ticketWallet")
+    List<User> findAllWithWallet();
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.ticketWallet " +
+            "WHERE u.nickname LIKE %:query% OR u.email LIKE %:query%")
+    List<User> findByNicknameOrEmailWithWallet(@Param("query") String query);
 }
