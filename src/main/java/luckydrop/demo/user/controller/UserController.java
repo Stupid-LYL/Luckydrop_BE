@@ -17,6 +17,7 @@ import luckydrop.demo.user.service.UserService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -188,5 +189,23 @@ public class UserController {
             response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
+    }
+
+    // 전체 목록 + 검색 (query 파라미터 있으면 검색, 없으면 전체)
+//    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<AdminUserResDto>> getUsers(
+            @RequestParam(required = false) String query) {
+        return ResponseEntity.ok(userService.getUsers(query));
+    }
+
+    // 호스트 승격
+//    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{userId}/role")
+    public ResponseEntity<Void> changeRole(
+            @PathVariable String userId,
+            @RequestBody ChangeRoleReqDto request) {
+        userService.changeRole(userId, request.getRole());
+        return ResponseEntity.ok().build();
     }
 }

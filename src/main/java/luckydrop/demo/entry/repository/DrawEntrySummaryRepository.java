@@ -78,66 +78,45 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
 
     // ===== MyEntries 기능 추가 =====
     @Query(value = """
-            SELECT 
-                CAST(d.id AS SIGNED) as id,
-                CAST(des.draw_id AS SIGNED) as drawId,
-                d.title as drawTitle,
-                COALESCE(ii.image_url, '') as drawImage,
-                DATE_FORMAT(des.updated_at, '%Y-%m-%d %H:%i') as entryDate,
-                CAST(COALESCE(SUM(tl.amount), 0) AS SIGNED) as ticketUsed,
-                CAST(COALESCE(COUNT(tl.id), des.entry_count) AS SIGNED) as entryCount,
-                CASE
-                    WHEN d.status = 'OPEN' THEN 'OPEN'
-                    WHEN d.status = 'DRAWING' THEN 'DRAWING'
-                    WHEN d.status = 'COMPLETED' THEN
-                        CASE WHEN dw.id IS NOT NULL THEN 'WON' ELSE 'LOST' END
-                    ELSE 'DONE'
-                END as status,
-                DATE_FORMAT(d.end_at, '%Y-%m-%d %H:%i') as resultDate,
-                CAST(CASE WHEN dw.id IS NOT NULL THEN 1 ELSE 0 END AS SIGNED) as isWinner
-            FROM draw_entry_summary des
-            JOIN draw d ON des.draw_id = d.id
-            LEFT JOIN inventory i ON d.inventory_id = i.id
-            LEFT JOIN inventory_image ii ON i.id = ii.inventory_id AND ii.sort_order = 1
-            LEFT JOIN draw_winner dw ON d.id = dw.draw_id AND des.user_id = dw.user_id
-            LEFT JOIN ticket_ledger tl ON tl.user_id = des.user_id 
-                AND tl.type = 1          -- ✅ TicketHistoryType.USE
-                AND tl.ref_type = 'DRAW' 
-                AND tl.ref_id = des.draw_id
-            WHERE des.user_id = :userId
-              AND (:search IS NULL OR LOWER(d.title) LIKE LOWER(CONCAT('%', :search, '%')))
-              AND (:status IS NULL OR
-                  (CASE
-                      WHEN d.status = 'OPEN' THEN 'OPEN'
-                      WHEN d.status = 'DRAWING' THEN 'DRAWING'
-                      WHEN d.status = 'COMPLETED' THEN
-                          CASE WHEN dw.id IS NOT NULL THEN 'WON' ELSE 'LOST' END
-                      ELSE 'DONE'
-                  END = :status))
-              AND (:fromDate IS NULL OR des.created_at >= :fromDate)
-              AND (:toDate IS NULL OR des.created_at <= :toDate)
-            GROUP BY des.draw_id, des.user_id, d.id, d.title, ii.image_url, des.created_at, 
-                     des.entry_count, d.status, dw.id
-            ORDER BY des.created_at DESC
-            """,
+    SELECT 
+        CAST(d.id AS SIGNED) as id,
+        CAST(des.draw_id AS SIGNED) as drawId,
+        d.title as drawTitle,
+        COALESCE(ii.image_url) as drawImage,
+        DATE_FORMAT(des.updated_at, '%Y-%m-%d %H:%i') as entryDate,
+        CAST(COALESCE(SUM(tl.amount), 0) AS SIGNED) as ticketUsed,
+        CAST(COALESCE(des.entry_count, 1) AS SIGNED) as entryCount,
+        d.status as status,  -- ✅ DrawStatus 그대로 반환
+        DATE_FORMAT(d.end_at, '%Y-%m-%d %H:%i') as resultDate,
+        CAST(CASE WHEN dw.id IS NOT NULL THEN 1 ELSE 0 END AS SIGNED) as isWinner
+    FROM draw_entry_summary des
+    JOIN draw d ON des.draw_id = d.id
+    LEFT JOIN inventory i ON d.inventory_id = i.id
+    LEFT JOIN inventory_image ii ON i.id = ii.inventory_id AND ii.sort_order = 0
+    LEFT JOIN draw_winner dw ON d.id = dw.draw_id AND des.user_id = dw.user_id
+    LEFT JOIN ticket_ledger tl ON tl.user_id = des.user_id 
+        AND tl.type = 'USE'
+        AND tl.ref_type = 'DRAW' 
+        AND tl.ref_id = des.draw_id
+    WHERE des.user_id = :userId
+      AND (:search IS NULL OR LOWER(d.title) LIKE LOWER(CONCAT('%', :search, '%')))
+      AND (:status IS NULL OR d.status = :status)  -- ✅ DrawStatus 직접 비교
+      AND (:fromDate IS NULL OR des.created_at >= :fromDate)
+      AND (:toDate IS NULL OR des.created_at <= :toDate)
+    GROUP BY d.id, des.draw_id, des.user_id, d.title, ii.image_url, 
+             des.updated_at, des.entry_count, d.status, dw.id, d.end_at
+    ORDER BY des.updated_at DESC
+    """,
             countQuery = """
-                    SELECT COUNT(DISTINCT des.draw_id)
-                    FROM draw_entry_summary des
-                    JOIN draw d ON des.draw_id = d.id
-                    LEFT JOIN draw_winner dw ON d.id = dw.draw_id AND des.user_id = dw.user_id
-                    WHERE des.user_id = :userId
-                      AND (:search IS NULL OR LOWER(d.title) LIKE LOWER(CONCAT('%', :search, '%')))
-                      AND (:status IS NULL OR
-                          (CASE
-                              WHEN d.status = 'OPEN' THEN 'OPEN'
-                              WHEN d.status = 'DRAWING' THEN 'DRAWING'
-                              WHEN d.status = 'COMPLETED' THEN
-                                  CASE WHEN dw.id IS NOT NULL THEN 'WON' ELSE 'LOST' END
-                              ELSE 'DONE'
-                          END = :status))
-                      AND (:fromDate IS NULL OR des.created_at >= :fromDate)
-                      AND (:toDate IS NULL OR des.created_at <= :toDate)
-                    """,
+        SELECT COUNT(DISTINCT des.draw_id)
+        FROM draw_entry_summary des
+        JOIN draw d ON des.draw_id = d.id
+        WHERE des.user_id = :userId
+          AND (:search IS NULL OR LOWER(d.title) LIKE LOWER(CONCAT('%', :search, '%')))
+          AND (:status IS NULL OR d.status = :status)  -- ✅ DrawStatus 직접 비교
+          AND (:fromDate IS NULL OR des.created_at >= :fromDate)
+          AND (:toDate IS NULL OR des.created_at <= :toDate)
+        """,
             nativeQuery = true)
     Page<MyEntryResponse> findMyEntries(
             @Param("userId") Long userId,
@@ -156,17 +135,16 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
             SELECT COUNT(*) 
             FROM draw_entry_summary des 
             JOIN draw d ON des.draw_id = d.id 
-            WHERE des.user_id = :userId AND d.status IN ('OPEN', 'DRAWING')
+            WHERE des.user_id = :userId AND d.status = 'ACTIVE'
             """, nativeQuery = true)
     Long countInProgressByUserId(@Param("userId") Long userId);
 
     @Query(value = """
-            SELECT COUNT(DISTINCT des.draw_id)
-            FROM draw_entry_summary des
-            JOIN draw d ON des.draw_id = d.id
-            JOIN draw_winner dw ON d.id = dw.draw_id AND des.user_id = dw.user_id
-            WHERE des.user_id = :userId AND d.status = 'COMPLETED'
-            """, nativeQuery = true)
+        SELECT COUNT(DISTINCT dw.draw_id)
+        FROM draw_winner dw
+        JOIN draw_entry_summary des ON dw.draw_id = des.draw_id
+        WHERE dw.user_id = :userId
+        """, nativeQuery = true)
     Long countWonByUserId(@Param("userId") Long userId);
 
     @Query(value = """
@@ -174,10 +152,10 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
             FROM ticket_ledger tl
             JOIN draw_entry_summary des ON tl.ref_id = des.draw_id
             WHERE tl.user_id = :userId 
-              AND tl.type = :type 
+              AND tl.type = 'USE'
               AND tl.ref_type = 'DRAW'
             """, nativeQuery = true)
-    Long sumTicketUsedByUserId(@Param("userId") Long userId, @Param("type") TicketHistoryType type);  // TicketHistoryType -> String
+    Long sumTicketUsedByUserId(@Param("userId") Long userId);  // TicketHistoryType -> String
 
     boolean existsByUserIdAndCreatedAtBetween(Long userId, LocalDateTime start, LocalDateTime end); // 오늘 당일 드로우 참여확인
 
