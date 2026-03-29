@@ -40,6 +40,7 @@ public class Securityconfigs {
                         "/api/ticket/use", "/api/ticket/earn", "/api/ticket/adjust",
                         "/api/signup/email", "/api/signup/emailAuth",
                         "/uploads/**",
+                        "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
                         "/api/draws", "/api/draws/hot-banner", "/api/draws/create",
                         "/api/user/forgot-password", "/api/user/verify-reset-code", "/api/user/reset-password", "/api/user/change-password",
                         "/api/user/check-nickname", "/api/user/check-email", "/api/user/**").permitAll()

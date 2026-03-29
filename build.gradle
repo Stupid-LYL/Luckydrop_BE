@@ -50,6 +50,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // Redis (인증코드 임시 저장용)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    // swagger API 문서 생성
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.16'
 }
 
 tasks.named('test') {

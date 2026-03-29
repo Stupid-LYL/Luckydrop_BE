@@ -1,8 +1,19 @@
 package luckydrop.demo.draw.enums;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "드로우 조회 탭")
 public enum DrawTab {
-    ALL, // 전체 드로우 탭
-    UPCOMING, // 대기중 탭 목록
-    ONGOING, // 진행중 탭 목록
-    CLOSED // 마감 탭 목록
+
+    @Schema(description = "전체 목록")
+    ALL,
+
+    @Schema(description = "대기중 (DRAFT && startAt > now)")
+    UPCOMING,
+
+    @Schema(description = "진행중 (ACTIVE, DRAWING)")
+    ONGOING,
+
+    @Schema(description = "종료 (CLOSE 또는 종료시간 지난 것)")
+    CLOSED
 }
