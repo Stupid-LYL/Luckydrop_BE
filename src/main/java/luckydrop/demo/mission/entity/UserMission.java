@@ -3,6 +3,7 @@ package luckydrop.demo.mission.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import luckydrop.demo.common.BaseEntity;
+import luckydrop.demo.user.entity.User;
 
 import java.time.LocalDateTime;
 
@@ -29,8 +30,18 @@ public class UserMission extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    //관계 명시용
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
+
     @Column(name = "mission_id", nullable = false)
     private Long missionId;
+
+    //관계 명시용
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mission_id", insertable = false, updatable = false)
+    private Mission mission;
 
     @Column(name = "period_key", length = 20, nullable = false)
     private String periodKey;
