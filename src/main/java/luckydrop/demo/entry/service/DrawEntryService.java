@@ -36,7 +36,7 @@ public class DrawEntryService {
 
     @Transactional
     public DrawEntryResponse enter(Long drawId, Long userId, int count, String idempotencyKey) {
-        log.info("🎯 enterDraw: user={}, draw={}, count={}, tickets={}",
+        log.info("enterDraw: user={}, draw={}, count={}, idempotencyKey={}",
                 userId, drawId, count, idempotencyKey);
 
         Draw draw = drawRepository.findById(drawId)
@@ -45,13 +45,13 @@ public class DrawEntryService {
         validateEnterable(draw, userId, LocalDateTime.now());
 
         int ticketPerEntry = draw.getTicketCostEntry();
-        long totalCostLong = Math.multiplyExact((long) ticketPerEntry, (long) count);
+        long totalCostLong = Math.multiplyExact(ticketPerEntry, (long) count);
         if (totalCostLong > Integer.MAX_VALUE) {
             throw new IllegalStateException("ticket cost too large");
         }
         int totalCost = (int) totalCostLong;
 
-        // ✅ 1. 티켓 차감
+        // 1. 티켓 차감
         ticketService.useTickets(TicketUseReqDto.builder()
                 .userId(userId)
                 .amount(totalCost)
@@ -61,12 +61,13 @@ public class DrawEntryService {
                 .idempotencyKey(idempotencyKey)
                 .build());
 
-        // ✅ 2. 응모 횟수 증가 (count, NOT totalCost!)
+        // 2. 응모 횟수 증가
         upsertEntrySummary(drawId, userId, count);
 
-        long spentTicketsTotal = getCurrentEntryCount(drawId, userId);
+        long currentEntryCount = getCurrentEntryCount(drawId, userId);
+        long spentTicketsTotal = Math.multiplyExact(currentEntryCount, (long) ticketPerEntry);
 
-        log.info("✅ 응모 완료: count={}, tickets={}, total={}", count, totalCost, spentTicketsTotal);
+        log.info("응모 완료: count={}, tickets={}, total={}", count, totalCost, spentTicketsTotal);
 
         return DrawEntryResponse.builder()
                 .drawId(drawId)
@@ -77,25 +78,15 @@ public class DrawEntryService {
                 .build();
     }
 
-    private DrawEntrySummary upsertEntrySummary(Long drawId, Long userId, int entryCountToAdd) {
-        DrawEntrySummaryId id = new DrawEntrySummaryId(drawId, userId);
+    private void upsertEntrySummary(Long drawId, Long userId, int entryCountToAdd) {
+        log.info("entry summary upsert: draw={}, user={}, addCount={}",
+                drawId, userId, entryCountToAdd);
 
-        DrawEntrySummary summary = entrySummaryRepository.findById(id)
-                .map(existing -> {
-                    log.info("📊 기존: {} → +{}", existing.getEntryCount(), entryCountToAdd);
-                    existing.setEntryCount(existing.getEntryCount() + entryCountToAdd);
-                    return existing;
-                })
-                .orElseGet(() -> {
-                    log.info("➕ 신규: draw={}, user={}, count={}", drawId, userId, entryCountToAdd);
-                    DrawEntrySummary newOne = new DrawEntrySummary();
-                    newOne.setDrawId(drawId);
-                    newOne.setUserId(userId);
-                    newOne.setEntryCount((long) entryCountToAdd);
-                    return newOne;
-                });
+        int affectedRows = entrySummaryRepository.upsertIncrease(drawId, userId, entryCountToAdd);
 
-        return entrySummaryRepository.save(summary);
+        if (affectedRows <= 0) {
+            throw new IllegalStateException("failed to upsert draw entry summary");
+        }
     }
 
     private long getCurrentEntryCount(Long drawId, Long userId) {
