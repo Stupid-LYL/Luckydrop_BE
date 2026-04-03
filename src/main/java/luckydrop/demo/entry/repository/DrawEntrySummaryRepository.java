@@ -7,6 +7,7 @@ import luckydrop.demo.ticket.enums.TicketHistoryType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -57,15 +58,16 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
             """)
     List<DrawEntrySummary.ParticipantWeight> findWeights(@Param("drawId") Long drawId);
 
-//    @Modifying
-//    @Query(value = """
-//            INSERT INTO draw_entry_summary (draw_id, user_id, entry_count)
-//            VALUES (:drawId, :userId, :count)
-//            ON DUPLICATE KEY UPDATE entry_count = entry_count + :count
-//            """, nativeQuery = true)
-//    int upsertIncrease(@Param("drawId") Long drawId,
-//                       @Param("userId") Long userId,
-//                       @Param("count") int count);
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            INSERT INTO draw_entry_summary (draw_id, user_id, entry_count, created_at, updated_at)
+            VALUES (:drawId, :userId, :count, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE entry_count = VALUES(entry_count),
+            updated_at = NOW()
+            """, nativeQuery = true)
+    int upsertIncrease(@Param("drawId") Long drawId,
+                       @Param("userId") Long userId,
+                       @Param("count") int count);
 
     @Query(value = """
             SELECT entry_count
