@@ -79,7 +79,7 @@ public class DrawMissionClaimService {
 
         // 오늘 응모했는지 확인
         boolean hasEntryToday = drawEntrySummaryRepository
-                .existsByUserIdAndCreatedAtBetween(userId, start, end);
+                .existsByUserIdAndUpdatedAtBetween(userId, start, end);
 
         if (!hasEntryToday) {
             throw new IllegalStateException("오늘 드로우 응모 이력이 없습니다.");
