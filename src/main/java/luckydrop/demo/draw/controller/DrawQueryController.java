@@ -154,4 +154,9 @@ public class DrawQueryController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/draws/stats")
+    public ResponseEntity<DrawStatsResponse> getStats() {
+        return ResponseEntity.ok(drawQueryService.getStats());
+    }
 }

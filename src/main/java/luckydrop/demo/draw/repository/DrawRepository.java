@@ -24,6 +24,23 @@ public interface DrawRepository extends JpaRepository<Draw, Long> {
 
     Optional<Draw> findByIdAndStatusNot(Long id, DrawStatus status);
 
+    // 드로우 목록 집계용
+    @Query("""
+            select count(d)
+            from Draw d
+            where d.status <> luckydrop.demo.draw.enums.DrawStatus.CANCEL
+            """)
+    long countVisibleDraws();
+
+    // 드로우 목록 집계용
+    @Query("""
+         select count(d)
+         from Draw d
+         where d.status in :statuses
+    """)
+    long countByStatuses(@Param("statuses") List<DrawStatus> statuses);
+
+
     @Query("""
         select d
         from Draw d
