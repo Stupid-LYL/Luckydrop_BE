@@ -3,10 +3,7 @@ package luckydrop.demo.draw.service;
 import lombok.RequiredArgsConstructor;
 import luckydrop.demo.draw.bookmark.repository.DrawBookmarkRepository;
 import luckydrop.demo.draw.bookmark.service.DrawBookmarkService;
-import luckydrop.demo.draw.dto.response.DrawDetailResponse;
-import luckydrop.demo.draw.dto.response.DrawCardResponse;
-import luckydrop.demo.draw.dto.response.HostWinnerInfoResponse;
-import luckydrop.demo.draw.dto.response.HotBannerResponse;
+import luckydrop.demo.draw.dto.response.*;
 import luckydrop.demo.draw.entity.Draw;
 import luckydrop.demo.draw.entity.DrawEntrySummary;
 import luckydrop.demo.draw.enums.DrawSort;
@@ -154,6 +151,19 @@ public class DrawQueryService {
                 entryCount);
     }
 
+    public DrawStatsResponse getStats() {
+        long totalDrawCount = drawRepository.countVisibleDraws();
+        long activeDrawCount = drawRepository.countByStatuses(
+                List.of(DrawStatus.ACTIVE, DrawStatus.DRAWING)
+        );
+        long totalEntryCount = drawEntrySummaryRepository.sumEntryCountExcludingCanceledDraws();
+
+        return new DrawStatsResponse(
+                totalDrawCount,
+                activeDrawCount,
+                totalEntryCount
+        );
+    }
 
     public HotBannerResponse getHotBanner(Long userId) {
 

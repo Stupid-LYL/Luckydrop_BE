@@ -48,7 +48,7 @@ public class DrawCardResponse {
     @Schema(description = "북마크 수", example = "77")
     private long bookmarkCount;
 
-
+    // 값의 변환이 필요하므로 정적 메서드 from() 을 생성
     public static DrawCardResponse from(
             Draw draw,
             boolean isBookmarked,

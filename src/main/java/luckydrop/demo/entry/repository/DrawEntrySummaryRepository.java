@@ -3,7 +3,6 @@ package luckydrop.demo.entry.repository;
 import luckydrop.demo.draw.entity.DrawEntrySummary;
 import luckydrop.demo.draw.entity.DrawEntrySummaryId;
 import luckydrop.demo.entry.dto.response.MyEntryResponse;
-import luckydrop.demo.ticket.enums.TicketHistoryType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -76,6 +75,16 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
             """, nativeQuery = true)
     Long findEntryCount(@Param("drawId") Long drawId,
                         @Param("userId") Long userId);
+
+
+    @Query(value = """
+    select coalesce(sum(des.entry_count), 0)
+    from draw_entry_summary des
+    join draw d on d.id = des.draw_id
+    where d.status <> 'CANCEL'
+""", nativeQuery = true)
+    long sumEntryCountExcludingCanceledDraws();
+
 
     // ===== MyEntries 기능 추가 =====
     @Query(value = """

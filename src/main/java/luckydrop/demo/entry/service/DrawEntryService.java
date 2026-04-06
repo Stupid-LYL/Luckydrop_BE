@@ -1,14 +1,11 @@
 package luckydrop.demo.entry.service;
 
 import lombok.extern.slf4j.Slf4j;
-import luckydrop.demo.draw.entity.DrawEntrySummary;
-import luckydrop.demo.draw.entity.DrawEntrySummaryId;
 import luckydrop.demo.draw.enums.DrawStatus;
 import luckydrop.demo.entry.dto.request.MyEntryListRequest;
 import luckydrop.demo.entry.dto.response.MyEntryResponse;
 import luckydrop.demo.entry.dto.response.MyEntryStatsResponse;
 import luckydrop.demo.ticket.dto.request.TicketUseReqDto;
-import luckydrop.demo.ticket.enums.TicketHistoryType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,9 +27,6 @@ public class DrawEntryService {
     private final DrawRepository drawRepository;
     private final DrawEntrySummaryRepository entrySummaryRepository;
     private final TicketService ticketService;
-
-    //정책값: 1회 최대 응모수
-    //private static final int MAX_ENTRY_PER_REQUEST = 1000;
 
     @Transactional
     public DrawEntryResponse enter(Long drawId, Long userId, int count, String idempotencyKey) {
@@ -110,26 +104,26 @@ public class DrawEntryService {
     }
 
     public Page<MyEntryResponse> getMyEntries(Long userId, MyEntryListRequest req) {
-        log.info("🔍 getMyEntries - userId: {}, search: {}, status: {}, page: {}/{}",
+        log.info("getMyEntries - userId: {}, search: {}, status: {}, page: {}/{}",
                 userId, req.getSearch(), req.getStatus(), req.getPage(), req.getSize());
 
         Page<MyEntryResponse> entries = entrySummaryRepository.findMyEntries(
                 userId, req.getSearch(), req.getStatus(), req.getFromDate(),
                 req.getToDate(), PageRequest.of(req.getPage(), req.getSize()));
 
-        log.info("📊 결과: total={}, size={}", entries.getTotalElements(), entries.getContent().size());
+        log.info("결과: total={}, size={}", entries.getTotalElements(), entries.getContent().size());
         return entries;
     }
 
     public MyEntryStatsResponse getMyEntryStats(Long userId) {
-        log.info("📈 getMyEntryStats - userId: {}", userId);
+        log.info("getMyEntryStats - userId: {}", userId);
 
         Long total = entrySummaryRepository.countTotalByUserId(userId);
         Long inProgress = entrySummaryRepository.countInProgressByUserId(userId);
         Long won = entrySummaryRepository.countWonByUserId(userId);
         Long tickets = entrySummaryRepository.sumTicketUsedByUserId(userId);
 
-        log.info("📊 RAW: total={}, inProgress={}, won={}, tickets={}", total, inProgress, won, tickets);
+        log.info("RAW: total={}, inProgress={}, won={}, tickets={}", total, inProgress, won, tickets);
 
         MyEntryStatsResponse stats = new MyEntryStatsResponse();
         stats.setTotal(total);
