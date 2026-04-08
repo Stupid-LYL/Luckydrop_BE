@@ -1,0 +1,42 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://luckydrop-db.cdiqy4q6sf1p.ap-northeast-2.rds.amazonaws.com:3306/lucky_drop
+    username: admin
+    password: hcUDngSW2gddFkf
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            enable: false
+
+  jpa:
+    database: mysql
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+        default_batch_fetch_size: 100
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+file:
+  upload-dir: /home/ubuntu/uploads

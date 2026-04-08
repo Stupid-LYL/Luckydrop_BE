@@ -4,57 +4,11 @@ server:
 spring:
   main:
     allow-circular-references: true
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/lucky_drop
-    username: ${username}
-    password: ${dbpassword}
-  data:
-    redis:
-      host: localhost
-      port: 6379
-
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME}  # ??? ???
-    password: ${MAIL_PASSWORD}  # ? ????
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-          ssl:
-            enable: false
-    service:
-      sender:
-        host: smtp.gmail.com
-        port: 587
-        username: ${MAIL_USERNAME}
-        password: ${MAIL_PASSWORD}
-        ssl:
-          enable: false
-
-  # JPA & Hibernate ??
-  jpa:
-    database: mysql
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        show_sql: true # ???? SQL ??? ??? ?????.
-        format_sql: true # SQL ??? ?? ?? ??????.
-        default_batch_fetch_size: 100 # N+1 ?? ??? ?? ??
-    database-platform: org.hibernate.dialect.MySQLDialect
 
   # JWT Secret key
 jwt:
   secret: "bHVja3lkcm9wc2VjcmV0YWNjZXNzdG9rZW5sdWNreWRyb3BzZWNyZXRhY2Nlc3N0b2tlbg=="
   expiration: 3000 #분
-
-file:
-  upload-dir: C:/luckydrop/uploads
 
 springdoc:
   api-docs:
