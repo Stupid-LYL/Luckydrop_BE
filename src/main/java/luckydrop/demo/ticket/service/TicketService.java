@@ -131,25 +131,21 @@ public class TicketService {
         TicketWallet wallet = ticketWalletRepository.findByUserIdWithLock(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("지갑을 찾을 수 없습니다."));
 
-        // 잔액 확인
-        if (wallet.getBalance() < request.getAmount()) {
+        int previousBalance = wallet.getBalance();
+
+        int updatedRows = ticketWalletRepository.decreaseBalance(request.getUserId(), request.getAmount());
+        if (updatedRows == 0) {
             throw new IllegalStateException("티켓이 부족합니다.");
         }
 
-        // 잔액 차감
-        int newBalance = wallet.getBalance() - request.getAmount();
-        TicketWallet updatedWallet = TicketWallet.builder()
-                .id(wallet.getId())
-                .user(wallet.getUser())
-                .balance(newBalance)
-                .build();
-        ticketWalletRepository.save(updatedWallet);
+        TicketWallet updatedWallet = ticketWalletRepository.findByUserId(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("지갑을 찾을 수 없습니다."));
+        int currentBalance = updatedWallet.getBalance();
 
-        // 내역 기록
         TicketLedger ledger = TicketLedger.builder()
                 .user(user)
                 .type(TicketHistoryType.USE)
-                .amount(-request.getAmount())  // 음수로 저장
+                .amount(-request.getAmount())
                 .reason(request.getReason())
                 .refType(request.getRefType())
                 .refId(request.getRefId())
@@ -157,16 +153,13 @@ public class TicketService {
                 .build();
         ticketLedgerRepository.save(ledger);
 
-        log.info("티켓 사용 완료 - userId: {}, amount: {}, balance: {}",
-                request.getUserId(), request.getAmount(), newBalance);
-
         return TicketTransactionResDto.builder()
                 .success(true)
                 .userId(request.getUserId())
                 .transactionType("USE")
                 .amount(request.getAmount())
-                .previousBalance(wallet.getBalance())
-                .currentBalance(newBalance)
+                .previousBalance(previousBalance)
+                .currentBalance(currentBalance)
                 .ledgerId(ledger.getId())
                 .build();
     }

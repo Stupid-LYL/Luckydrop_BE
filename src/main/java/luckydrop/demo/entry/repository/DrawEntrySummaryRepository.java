@@ -61,8 +61,9 @@ public interface DrawEntrySummaryRepository extends JpaRepository<DrawEntrySumma
     @Query(value = """
             INSERT INTO draw_entry_summary (draw_id, user_id, entry_count, created_at, updated_at)
             VALUES (:drawId, :userId, :count, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE entry_count = VALUES(entry_count),
-            updated_at = NOW()
+            ON DUPLICATE KEY UPDATE
+                entry_count = entry_count + VALUES(entry_count),
+                updated_at = NOW()
             """, nativeQuery = true)
     int upsertIncrease(@Param("drawId") Long drawId,
                        @Param("userId") Long userId,
